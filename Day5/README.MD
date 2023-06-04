@@ -56,3 +56,6 @@ $ docker rm -f kafka02
 ```bash
 $ bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe
 ```
+## Fatiando o Vídeo
+
+https://youtu.be/fiV3EOJiK-Y
