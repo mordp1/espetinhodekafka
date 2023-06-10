@@ -31,41 +31,41 @@ docker run --rm -it -v  ${PWD}:/opt -p 9092:9092 ubuntu:latest
 ```
 #### No Linux 
 ``` bash
-docker run --rm -it -v $(pwd):/opt -p 9092:9092 ubuntu:latest
+$ docker run --rm -it -v $(pwd):/opt -p 9092:9092 ubuntu:latest
 ``` 
 #### Utilizando Podman no Linux
 ``` bash
-sudo podman run --privileged --rm -it -v $(pwd):/opt -p 9092:9092 ubuntu:latest
+$ sudo podman run --privileged --rm -it -v $(pwd):/opt -p 9092:9092 ubuntu:latest
 ``` 
 ### Instalando pacotes
 ``` bash
 $ apt update && apt install default-jdk wget vim jq kafkacat -y
 ``` 
 ### Baixando o Kafka
-``` 
+```bash 
 $ wget -c https://dlcdn.apache.org/kafka/3.4.0/kafka_2.13-3.4.0.tgz -O - | tar -xz
 
 $ cd kafka_2.13-3.4.0
 ``` 
 ### Inciando Zookeeper
 ``` bash
-bin/zookeeper-server-start.sh -daemon config/zookeeper.properties
+$ bin/zookeeper-server-start.sh -daemon config/zookeeper.properties
 ``` 
 ### Iniciando o Kafka
 ``` bash
-bin/kafka-server-start.sh -daemon config/server.properties
+$ bin/kafka-server-start.sh -daemon config/server.properties
 ``` 
 ### Criar Topico
 ``` bash
-bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic topico1
+$ bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic topico1
 ``` 
 ### Listar Topicos
 ``` bash
-bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+$ bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
 ``` 
 ### Describe
 ``` bash
-bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic topico1
+$ bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic topico1
 ``` 
 
 ## Fatiando Vídeo

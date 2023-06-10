@@ -39,6 +39,14 @@ Aqui você pode acompanhar todos os comandos utilizados em cada dia, para facili
 
 [Day7/README.md](Day7/README.md)
 
-### [Day 8 - Apache Kafka - Entendendo o Kafka Connect](https://youtu.be/Obkg0sa4GB4)
+### Day 8 - [Apache Kafka - Entendendo o Kafka Connect](https://youtu.be/Obkg0sa4GB4)
 
 [Day8/README.md](Day8/README.md)
+
+### Day 9 - [Kafka Connect - FileStream produzindo mensagens a partir de um arquivo local.](https://www.youtube.com/watch?v=hdC5oMpgRlc)
+
+[Day9/README.md](Day9/README.md)
+
+### Day 10 - [Apache Kafka - Troubleshooting e Administrando Kafka Cluster.](https://www.youtube.com/watch?v=hdC5oMpgRlc)
+
+[Day10/README.md](Day10/README.md)

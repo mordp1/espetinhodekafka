@@ -29,8 +29,6 @@ $ bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic topico
 ### Abra outro terminal e procure seu container.
 ```bash
 $ docker ps
-ou
-$ podman ps
 ```
 ## troque o NOME pelo nome do seu container
 ```bash

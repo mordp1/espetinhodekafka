@@ -1,0 +1,15 @@
+FROM ubuntu:latest
+
+WORKDIR /opt/
+
+# Install pacotes
+RUN apt update && apt install default-jdk wget vim jq kafkacat -y
+
+# Kafka
+RUN wget -c https://dlcdn.apache.org/kafka/3.4.0/kafka_2.13-3.4.0.tgz  
+RUN tar -xzf kafka_2.13-3.4.0.tgz
+
+# Porta
+EXPOSE 9092
+
+VOLUME [ "/opt" ]
