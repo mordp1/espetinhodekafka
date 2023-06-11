@@ -1,4 +1,4 @@
-# Kafka Connect - Troubleshooting e Administrando Kafka Cluster.
+# Apache Kafka - Troubleshooting e Administrando Kafka Cluster.
 
 Fundamentos Apache Kafka na visão Admin.
 
