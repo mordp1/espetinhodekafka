@@ -20,36 +20,31 @@ $ apt-get install kafkacat
 
 https://www.conduktor.io/kafka/how-to-start-kafka-using-docker/
 
-### Clone do repo
-``` bash
-$ git clone https://github.com/conduktor/kafka-stack-docker-compose.git
-$ cd kafka-stack-docker-compose
+### Baixe o repositorio
+```bash
+$ git clone https://github.com/mordp1/espetinhodekafka
+$ cd espetinhodekafka/day9
 ```
-#### Edite o zk-multiple-kafka-multiple.yml e adicione ao final do arquivo:
-``` YAML
-  kafka-connect:
-    image: confluentinc/cp-kafka-connect:7.3.2
-    hostname: kafka-connect
-    container_name: kafka-connect
-    ports:
-      - "8083:8083"
-    environment:
-      CONNECT_REST_PORT: 8083
-    command:
-      - bash
-      - -c
-      - |
-        echo "Installing connector plugins"
-        sleep infinity
- ``` 
-### Subindo 
+
+### Subindo Kafka Cluster com Kafa Connect
+
 ``` bash
 $ docker-compose -f zk-multiple-kafka-multiple.yml up -d
 ``` 
+
 ### Crie um novo topico que será usado para produzirmos as mensagens.
+
 ``` bash
 $ docker exec -it kafka1 kafka-topics --bootstrap-server kafka1:19092 --topic connect-test --create --partitions 3 --replication-factor 3
 ```
+
+### Você pode conectar no container e criar os seguinte arquivos
+
+```bash
+$ docker exec -it kafka-connect /bin/bash
+$ cd /tmp/
+```
+
 ### Crie o config.properties com seguinte conteúdo:
 ``` bash
 $ cat << EOF> config.properties 
@@ -75,13 +70,14 @@ EOF
 ``` 
 ### Agora crie um arquivo em /tmp/test.txt para que o connector possa ler e produzir a mensagem
 ``` bash
-cat <<EOF> 
+$ cat <<EOF> 
 teste1
 teste2
 teste3
 EOF
 ```
-### Se você não criou dentro do container, basta copiar os 3 arquivos para dentro do container
+
+### Se você não criou os arquivos dentro do container, basta copiar os 3 arquivos.
 ``` bash
 $ docker cp connect-file-source.properties kafka-connect:/tmp
 $ docker cp config.properties kafka-connect:/tmp
@@ -102,7 +98,8 @@ $ kafkacat -C -b localhost:9092 -t connect-test
 ### Você pode adicionar novas linhas no arquivo e ver ele sendo processado
 
 ``` bash
-$ docker exec -it kafka1 echo teste4 >> /tmp/test.txt
+$ docker exec -it kafka-connect /bin/bash
+$ echo teste4 >> /tmp/test.txt
 ```
 
 ### Derrubando todos os containers:
