@@ -6,7 +6,7 @@ Os vídeos foram feitos com a idéia de compartilhar o meu conhecimento adquirid
 Eu mesmo editei os vídeos, sem muito conhecimento na ferramenta.
 
 ## Canal no Youtube
-https://www.youtube.com/channel/UC3pevgVzUWKo5CoWdhDsoHw
+[@espetinhodekafka](https://www.youtube.com/@espetinhodekafka)
 
 ## Descrição
 Aqui você pode acompanhar todos os comandos utilizados em cada dia, para facilitar no aprendizado e montar seu Laboratorio.
