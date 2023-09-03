@@ -10,3 +10,7 @@ https://www.youtube.com/@espetinhodekafka
 
 ## Descrição
 Aqui você pode acompanhar todos os comandos utilizados em cada dia, para facilitar no aprendizado e montar seu Laboratorio.
+
+### [kafka-fundamentals-admin/README.md](kafka-fundamentals-admin/README.md)
+
+### [MSK/README.md](MSK/README.md)
