@@ -14,3 +14,5 @@ Aqui você pode acompanhar todos os comandos utilizados em cada dia, para facili
 ### [kafka-fundamentals-admin/README.md](kafka-fundamentals-admin/README.md)
 
 ### [MSK/README.md](MSK/README.md)
+
+### [kafka-strimzi/README.md](kafka-strimzi/README.md)
