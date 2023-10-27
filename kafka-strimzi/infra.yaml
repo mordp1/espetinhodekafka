@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    kubernetes.io/metadata.name: kafka-test
+  name: kafka-test
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active

@@ -1,0 +1,80 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kafka-ui
+  namespace: kafka-test
+  labels:
+    app: kafka-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-ui
+  template:
+    metadata:
+      labels:
+        app: kafka-ui
+    spec:
+      containers:
+        - name: kafka-ui
+          image: provectuslabs/kafka-ui
+          volumeMounts:
+            - name: kafka-truststore
+              readOnly: true
+              mountPath: /opt/cert
+          ports:
+            - name: http-port
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: KAFKA_CLUSTERS_0_NAME
+              value: kafka-cluster
+            - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
+              value: "mykafka-kafka-bootstrap:9093"
+            - name: KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL
+              value: SASL_SSL
+            - name: KAFKA_CLUSTERS_0_PROPERTIES_SASL_MECHANISM
+              value: SCRAM-SHA-512
+            - name: KAFKA_CLUSTERS_0_SCRAM_USER
+              value: admin
+            - name: KAFKA_CLUSTERS_0_SCRAM_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: user-admin
+                  key: password
+            - name: KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG
+              value: >-
+                org.apache.kafka.common.security.scram.ScramLoginModule required
+                username='$(KAFKA_CLUSTERS_0_SCRAM_USER)'
+                password='$(KAFKA_CLUSTERS_0_SCRAM_PASSWORD)';
+            - name: KAFKA_CLUSTERS_0_METRICS_PORT
+              value: '9999'
+            - name: KAFKA_CLUSTERS_0_PROPERTIES_SSL_TRUSTSTORE_LOCATION
+              value: /opt/cert/ca.p12
+            - name: KAFKA_CLUSTERS_0_COMMON_SASL_MECHANISM
+              value: SCRAM-SHA-512
+            - name: KAFKA_CLUSTERS_0_PROPERTIES_SSL_TRUSTSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mykafka-cluster-ca-cert
+                  key: ca.password
+      volumes:
+        - name: kafka-truststore
+          secret:
+            secretName: mykafka-cluster-ca-cert
+            defaultMode: 420
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-ui
+  labels:
+    app: kafka-ui
+  namespace: kafka-test
+spec:
+  selector:
+    app: kafka-ui
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080

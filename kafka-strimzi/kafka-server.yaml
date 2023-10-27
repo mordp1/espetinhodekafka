@@ -1,0 +1,113 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: mykafka
+  labels:
+    app: kafka-cluster-production
+    env: prod
+  generation: 1
+  namespace: kafka-test
+spec:
+  kafka:
+    config:
+      offsets.topic.replication.factor: 2
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      default.replication.factor: 3
+      min.insync.replicas: 2
+      inter.broker.protocol.version: '3.2'
+      log.message.format.version: '3.2'
+      log.retention.hours: 48
+      auto.create.topics.enable: false
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: kafka-metrics
+          key: kafka-metrics-config.yml
+    resources:
+      limits:
+        memory: 1G
+        cpu: '1'
+      requests:
+        cpu: '200m'
+        memory: 200Mi
+    authorization:
+      superUsers:
+        - admin
+      type: simple
+    storage:
+      type: jbod
+      volumes:
+      - id: 0
+        type: persistent-claim
+        size: 5Gi
+        deleteClaim: false
+      - id: 1
+        type: persistent-claim
+        size: 5Gi
+        deleteClaim: false
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        authentication:
+          type: scram-sha-512
+        port: 9093
+        type: internal
+        tls: true
+      - name: external
+        authentication:
+          type: scram-sha-512
+        port: 9094
+        type: ingress
+        tls: true
+        configuration:
+          bootstrap:
+            host: mykafka-kafka-bootstrap.test
+          brokers:
+          - broker: 0
+            host: mykafka-kafka-0.test
+          - broker: 1
+            host: mykafka-kafka-1.test
+          - broker: 2
+            host: mykafka-kafka-2.test
+    replicas: 3
+    version: 3.5.1
+  kafkaExporter:
+    topicRegex: ".*"
+    groupRegex: ".*"
+  entityOperator:
+    topicOperator: {}
+    userOperator:
+      secretPrefix: user-
+  zookeeper:
+    livenessProbe:
+      initialDelaySeconds: 360
+      timeoutSeconds: 30  
+    readinessProbe:
+      initialDelaySeconds: 360
+      timeoutSeconds: 15
+    config:
+      zookeeper.ssl.hostnameVerification: false
+      zookeeper.ssl.quorum.hostnameVerification: false
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: kafka-metrics
+          key: zookeeper-metrics-config.yml
+    storage:
+      deleteClaim: false
+      size: 10Gi
+      type: persistent-claim
+    resources:
+      limits:
+        memory: 1G
+        cpu: '1'
+      requests:
+        cpu: '200m'
+        memory: 200Mi
+    replicas: 3
