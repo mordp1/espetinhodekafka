@@ -1,0 +1,32 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaConnector
+metadata:
+  name: "debezium-test-connector1"
+  labels:
+    strimzi.io/cluster: kafka-connect-staging
+spec:
+  class: io.debezium.connector.postgresql.PostgresConnector
+  tasksMax: 1
+  config:
+    database.port: "5432"
+    database.hostname: "postgres"
+    database.user: "data_engineer"
+    database.password: "password"
+    publication.name: test_debezium_pub
+    slot.name : test_debezium_slot
+    database.dbname: "data_engineer"
+    plugin.name: "pgoutput"
+    heartbeat.interval.ms: "30000"
+    heartbeat.action.query: "INSERT INTO public.debezium_heartbeat (id, ts) VALUES (1, NOW()) ON CONFLICT(id) DO UPDATE SET ts=EXCLUDED.ts;"
+    value.converter.schemas.enable: "true"
+    key.converter.schemas.enable: "true"
+    topic.prefix: "ap-con-debezium-test"
+    key.converter: "io.apicurio.registry.utils.converter.AvroConverter"
+    key.converter.apicurio.registry.url: "http://apicurioregistry-service.kafka.svc.cluster.local:8080//apis/registry/v2"
+    key.converter.apicurio.registry.auto-register: true
+    key.converter.apicurio.registry.find-latest: true
+    value.converter: "io.apicurio.registry.utils.converter.AvroConverter"
+    value.converter.apicurio.registry.url: "http://apicurioregistry-service.kafka.svc.cluster.local:8080//apis/registry/v2"
+    value.converter.apicurio.registry.auto-register: true
+    value.converter.apicurio.registry.find-latest: true
+    

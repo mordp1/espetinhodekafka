@@ -1,0 +1,96 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: ap-con-debezium-test.inventory.customers
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: ap-con-debezium-test.inventory.geom
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: ap-con-debezium-test.inventory.orders
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: ap-con-debezium-test.inventory.products
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: ap-con-debezium-test.inventory.products_on_hand
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: ap-con-debezium-test.inventory.spatial_ref_sys
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: ap-con-debezium-test.public.debezium_heartbeat
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: __debezium-heartbeat.ap-con-debezium-test
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+

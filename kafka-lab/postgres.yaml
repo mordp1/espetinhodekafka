@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: postgres-deployment
+spec:
+ selector:
+   matchLabels:
+     app: postgres-container
+ template:
+   metadata:
+     labels:
+       app: postgres-container
+   spec:
+     containers:
+       - name: postgres-container
+         image: debezium/example-postgres:1.0
+         ports:
+           - containerPort: 5432
+         env:
+           - name: POSTGRES_USER
+             value: data_engineer
+           - name: POSTGRES_PASSWORD
+             value: password
+---
+apiVersion: v1
+kind: Service
+metadata:
+ name: postgres
+spec:
+ ports:
+   - port: 5432
+ selector:
+   app: postgres-container

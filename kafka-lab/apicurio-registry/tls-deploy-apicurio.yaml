@@ -1,0 +1,15 @@
+apiVersion: registry.apicur.io/v1
+kind: ApicurioRegistry
+metadata:
+  name: apicurioregistry
+spec:
+  configuration:
+    persistence: "kafkasql"
+    kafkasql:
+      bootstrapServers: "kafka-staging-kafka-bootstrap.kafka.svc.cluster.local:9093"
+      security:
+        tls: # https://access.redhat.com/documentation/en-us/red_hat_build_of_apicurio_registry/2.3/html-single/installing_and_deploying_apicurio_registry_on_openshift/index#registry-persistence-kafkasql-tls
+          keystoreSecretName: apicurio-user
+          truststoreSecretName: kafka-staging-cluster-ca-cert
+  deployment:
+    replicas: 1

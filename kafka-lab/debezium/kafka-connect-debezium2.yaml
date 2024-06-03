@@ -1,0 +1,45 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaConnect
+metadata:
+  name: kafka-connect-staging
+  annotations:
+  # use-connector-resources configures this KafkaConnect
+  # to use KafkaConnector resources to avoid
+  # needing to call the Connect REST API directly
+    strimzi.io/use-connector-resources: "true"
+spec:
+  logging:
+    type: inline
+    loggers:
+      connect.root.logger.level: INFO
+      log4j.logger.org.apache.kafka.connect.runtime.WorkerSourceTask: INFO
+      log4j.logger.org.apache.kafka.connect.runtime.WorkerSinkTask: INFO
+  image: k3d-registry:5111/con-debezium:v0.3
+  replicas: 1
+  bootstrapServers: kafka-staging-kafka-bootstrap.kafka.svc.cluster.local:9093
+  tls:
+    trustedCertificates:
+      - secretName: kafka-staging-cluster-ca-cert
+        certificate: ca.crt
+  authentication:
+    type: tls
+    certificateAndKey:
+      secretName: ap-internal-connect
+      certificate: user.crt
+      key: user.key
+  metricsConfig:
+    type: jmxPrometheusExporter
+    valueFrom:
+      configMapKeyRef:
+        name: connect-metrics
+        key: metrics-config.yml
+  config:
+    group.id: ap-con-cluster
+    offset.storage.topic: ap-con-cluster-offsets
+    config.storage.topic: ap-con-cluster-configs
+    status.storage.topic: ap-con-cluster-status
+    config.storage.replication.factor: -1
+    offset.storage.replication.factor: -1
+    status.storage.replication.factor: -1
+    config.providers: env
+    config.providers.env.class: org.apache.kafka.common.config.provider.EnvVarConfigProvider

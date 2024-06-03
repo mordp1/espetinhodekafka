@@ -1,0 +1,29 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: apicurio-user
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  authentication:
+    type: tls
+  authorization:
+  authorization:
+    acls:
+    - operations:
+        - Read
+        - Describe
+        - Write
+        - Create
+      resource:
+        name: kafkasql-journal
+        patternType: literal
+        type: topic
+    - operations:
+        - Read
+        - Write
+      resource:
+        name: apicurio-registry-
+        patternType: prefix
+        type: group
+    type: simple 

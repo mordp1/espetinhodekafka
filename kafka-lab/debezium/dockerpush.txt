@@ -1,0 +1,22 @@
+#!/bin/bash
+
+docker buildx build --platform linux/amd64 -t debezium:v0.1 .
+
+docker tag debezium:v0.1 k3d-registry.localhost:5111/debezium:v0.1
+
+docker push k3d-registry.localhost:5111/debezium:v0.1
+
+
+k3d cluster create kube-cluster --registry-use k3d-registry:5111  --agents-memory 12G
+
+# 1. create a new cluster that uses this registry
+k3d cluster create --registry-use k3d-registry:5111
+
+# 2. tag an existing local image to be pushed to the registry
+docker tag nginx:latest k3d-registry:5111/mynginx:v0.1
+
+# 3. push that image to the registry
+docker push k3d-registry:5111/mynginx:v0.1
+
+# 4. run a pod that uses this image
+--image k3d-registry:5111/debezium:v0.1

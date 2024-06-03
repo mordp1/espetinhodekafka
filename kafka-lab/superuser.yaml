@@ -1,0 +1,45 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: ap-internal-superuser
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  authentication:
+    type: tls
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: "*"
+          patternType: literal
+        operation: All
+      - resource:
+          type: group
+          name: "*"
+          patternType: literal
+        operation: All
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: ap-internal-kafka-ui
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  authentication:
+    type: tls
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: "*"
+          patternType: literal
+        operation: All
+      - resource:
+          type: group
+          name: "*"
+          patternType: literal
+        operation: All
