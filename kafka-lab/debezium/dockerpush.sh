@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TAG=v0.4
+TAG=v0.5
 NAME=con-debezium
 
 docker buildx build --platform linux/amd64 -t $NAME:$TAG .

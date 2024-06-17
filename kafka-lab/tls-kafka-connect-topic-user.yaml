@@ -94,6 +94,15 @@ spec:
       operations:
         - Read
     - resource:
+        type: group
+        name: connect
+        patternType: prefix
+      operations:
+        - Read
+        - Describe
+        - Write
+        - Create
+    - resource:
         type: topic
         name: ap-con-
         patternType: prefix
@@ -109,4 +118,4 @@ spec:
         - Read
         - Describe
         - Write
-        - Create    
+        - Create
