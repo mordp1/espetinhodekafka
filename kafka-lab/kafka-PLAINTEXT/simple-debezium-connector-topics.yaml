@@ -1,0 +1,97 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: conn-simple.inventory.customers
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: conn-simple.inventory.geom
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: conn-simple.inventory.orders
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: conn-simple.inventory.products
+  labels:
+    strimzi.io/cluster: kafka-staging
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+---
+#apiVersion: kafka.strimzi.io/v1beta2
+#kind: KafkaTopic
+#metadata:
+#  name: conn-simple.inventory.products_on_hand
+#  labels:
+#    strimzi.io/cluster: kafka-staging
+#spec:
+#  partitions: 3
+#  replicas: 3
+#  config:
+#    min.insync.replicas: 2
+#---
+#apiVersion: kafka.strimzi.io/v1beta2
+#kind: KafkaTopic
+#metadata:
+#  name: conn-simple.inventory.spatial_ref_sys
+#  labels:
+#    strimzi.io/cluster: kafka-staging
+#spec:
+#  partitions: 3
+#  replicas: 3
+#  config:
+#    min.insync.replicas: 2
+#---
+#apiVersion: kafka.strimzi.io/v1beta2
+#kind: KafkaTopic
+#metadata:
+#  name: conn-simple.public.debezium_heartbeat
+#  labels:
+#    strimzi.io/cluster: kafka-staging
+#spec:
+#  partitions: 3
+#  replicas: 3
+#  config:
+#    min.insync.replicas: 2
+#---
+#apiVersion: kafka.strimzi.io/v1beta2
+#kind: KafkaTopic
+#metadata:
+#  name: __debezium-heartbeat.conn-simple
+#  labels:
+#    strimzi.io/cluster: kafka-staging
+#spec:
+#  partitions: 3
+#  replicas: 3
+#  config:
+#    min.insync.replicas: 2
+#
+#
