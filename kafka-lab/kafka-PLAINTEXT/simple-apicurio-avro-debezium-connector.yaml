@@ -1,7 +1,7 @@
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaConnector
 metadata:
-  name: "debezium-test-connector1"
+  name: "debezium-simple-avro"
   labels:
     strimzi.io/cluster: kafka-connect-staging
 spec:
@@ -20,7 +20,7 @@ spec:
     heartbeat.action.query: "INSERT INTO public.debezium_heartbeat (id, ts) VALUES (1, NOW()) ON CONFLICT(id) DO UPDATE SET ts=EXCLUDED.ts;"
     value.converter.schemas.enable: "true"
     key.converter.schemas.enable: "true"
-    topic.prefix: "ap-con-debezium-test"
+    topic.prefix: "conn-simple-avro"
     key.converter: "io.apicurio.registry.utils.converter.AvroConverter"
     key.converter.apicurio.registry.url: "http://apicurioregistry-service.kafka-simple.svc.cluster.local:8080/apis/registry/v2"
     key.converter.apicurio.registry.auto-register: true

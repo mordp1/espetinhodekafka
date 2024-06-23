@@ -10,4 +10,4 @@ spec:
   config:
     file: /tmp/file-customers.txt
     tasks.max: "1"
-    topics: ap-con-debezium-test.inventory.customers
+    topics: conn-simple.inventory.customers
