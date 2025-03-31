@@ -1,3 +1,9 @@
+# Links Ref.
+https://strimzi.io/blog/2021/12/17/kafka-segment-retention/
+https://aiven.io/docs/products/kafka/concepts/partition-segments
+https://kafka.apache.org/documentation/#topicconfigs_retention.ms
+https://www.redpanda.com/guides/kafka-performance-kafka-logs
+
 # Preparando Docker
 Criar nosso network
 
@@ -112,24 +118,4 @@ kafka-dump-log.sh --files 00000000000000000000.index --deep-iteration --print-da
 kafka-run-class.sh kafka.tools.DumpLogSegments --deep-iteration --print-data-log --files 00000000000000000000.timeindex
 or
 kafka-dump-log.sh --files 00000000000000000000.timeindex --deep-iteration --print-data-log
-```
-
-## Executando o kafka-reassign-partitions.sh 
-
-Generate json
-```bash
-cat <<EOF> /tmp/topics.json
-    {"version":1,
-    "partitions":[
-     {"topic":"test","partition":0,"replicas":[1,2,3],"log_dirs":["/data2/kafka-logs","any","any"]},
-     {"topic":"test","partition":1,"replicas":[1,2,3],"log_dirs":["/data2/kafka-logs","any","any"]},
-     {"topic":"test","partition":2,"replicas":[1,2,3],"log_dirs":["/data2/kafka-logs","any","any"]}
-    ]}
-EOF
-```
-
-Execute command
-
-```bash
-kafka-reassign-partitions.sh --bootstrap-server localhost:9092 --reassignment-json-file /tmp/topics.json --execute
 ```
