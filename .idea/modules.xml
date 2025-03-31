@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/espetinhodekafka.iml" filepath="$PROJECT_DIR$/.idea/espetinhodekafka.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/kafka-producer.main.iml" filepath="$PROJECT_DIR$/.idea/modules/kafka-producer.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/kafka-producer.test.iml" filepath="$PROJECT_DIR$/.idea/modules/kafka-producer.test.iml" />
+    </modules>
+  </component>
+</project>

@@ -5,7 +5,8 @@ docker network create kafka-net
 ```
 ## Run over differents terminal the commands:
 ```bash
-docker run -it --name kafka01 --hostname kafka01 --network=kafka-net --tmpfs /data:noexec,size=10000000,mode=1777 --tmpfs /data2:noexec,size=100000000,mode=1777 --rm apache/kafka:3.7.1 ```
+docker run -it --name kafka01 --hostname kafka01 --network=kafka-net --tmpfs /data:noexec,size=10000000,mode=1777 --tmpfs /data2:noexec,size=100000000,mode=1777 --rm apache/kafka:3.7.1 bash
+```
 ```bash
 docker run -it --name kafka02 --hostname kafka02 --network=kafka-net --tmpfs /data:noexec,size=100000000,mode=1777 --rm apache/kafka:3.7.1 bash
 ```

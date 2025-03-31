@@ -8,8 +8,7 @@ Abra 3 terminais diferentes e execute em cada um os containers abaixo:
 Terminal 1: 
 
 ```bash
-docker run -it --name kafka01 --hostname kafka01 --network=kafka-net --tmpfs /data:noexec,size=10000000,mode=1777 --tmpfs /data2:noexec,size=100000000,mode=1777 --rm apache/kafka:3.7.1 bash
-```
+docker run -it --name kafka01 --hostname kafka01 --network=kafka-net --tmpfs /data:noexec,size=10000000,mode=1777 --tmpfs /data2:noexec,size=100000000,mode=1777 --rm apache/kafka:3.7.1 bash```
 
 Terminal 2:
 
@@ -86,19 +85,33 @@ Produzindo mensagens
 ```bash
 kafka-verifiable-producer.sh --bootstrap-server localhost:9092 --max-messages 1000000 --topic test
 ```
-## No segundo terminal:
-Alterar min.insync.replicas=2
+## DumpLogs
 ```bash
-kafka-configs.sh --add-config min.insync.replicas=2 --topic test --bootstrap-server localhost:9092 --alter
-```
-Describe:
-```bash
-kafka-topics.sh --bootstrap-server localhost:9092 --topic test --describe
+cd /data/kafka-logs/test-2
 ```
 
-Realizar um dump das mensagens
 ```bash
+kafka-run-class.sh kafka.tools.DumpLogSegments --deep-iteration --print-data-log --files 00000000000000000000.log
+or 
 kafka-dump-log.sh --files 00000000000000000000.log --deep-iteration --print-data-log
+```
+
+```bash
+kafka-run-class.sh kafka.tools.DumpLogSegments --deep-iteration --print-data-log --files 00000000000000078883.log
+or
+kafka-dump-log.sh --files 00000000000000078883.log --deep-iteration --print-data-log
+```
+
+```bash
+kafka-run-class.sh kafka.tools.DumpLogSegments --deep-iteration --print-data-log --files 00000000000000000000.index
+or
+kafka-dump-log.sh --files 00000000000000000000.index --deep-iteration --print-data-log
+```
+
+```bash
+kafka-run-class.sh kafka.tools.DumpLogSegments --deep-iteration --print-data-log --files 00000000000000000000.timeindex
+or
+kafka-dump-log.sh --files 00000000000000000000.timeindex --deep-iteration --print-data-log
 ```
 
 ## Executando o kafka-reassign-partitions.sh 

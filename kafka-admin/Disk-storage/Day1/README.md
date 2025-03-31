@@ -70,7 +70,7 @@ kafka-server-start.sh -daemon /opt/kafka/config/server.properties
 ### Create a topic:
 
 ```bash
-kafka-topics.sh --bootstrap-server localhost:9092 --topic test --partitions 3 --create --replication-factor 3 --config min.insync.replicas=3
+  kafka-topics.sh --bootstrap-server localhost:9092 --topic test --partitions 3 --create --replication-factor 3 --config min.insync.replicas=3
 ```
 Describe:
 ```bash
