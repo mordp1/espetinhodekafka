@@ -1,15 +1,21 @@
 <!--
-Este README documenta o uso do Kafka Connect para integração de dados entre Kafka e outros sistemas, incluindo MySQL e arquivos locais. Os principais tópicos abordados são:
+This README documents the use of Kafka Connect for data integration between Kafka and other systems, including MySQL and local files. The main topics covered are:
 
-- Verificação dos plugins disponíveis no Kafka Connect.
-- Utilização do Datagen Connector para geração de mensagens fictícias no tópico `transactions`.
-- Consumo das mensagens do Kafka usando `kcat`, com opção de visualização via [VisiData](https://www.visidata.org/).
-- Configuração do JdbcSinkConnector para persistir dados do tópico `transactions` em uma tabela MySQL, incluindo comandos para consulta dos dados.
-- Alternativa de persistência dos dados em arquivo texto usando FileStreamSinkConnector.
-- Comando para listar e verificar o status dos connectors configurados.
-- Exemplos de uso de Single Message Transforms (SMT) para adicionar e formatar campos de timestamp nas mensagens antes de persistir no MySQL ou em arquivo.
+Checking the available plugins in Kafka Connect.
 
-Esses exemplos facilitam o entendimento e a prática de integração de dados com Kafka Connect, demonstrando desde a geração até o consumo e persistência dos dados, além de transformações intermediárias.
+Using the Datagen Connector to generate mock messages in the transactions topic.
+
+Consuming Kafka messages using kcat, with an option to visualize via VisiData.
+
+Configuring the JdbcSinkConnector to persist data from the transactions topic into a MySQL table, including data query commands.
+
+Alternative method for data persistence to a text file using the FileStreamSinkConnector.
+
+Command to list and check the status of configured connectors.
+
+Examples of using Single Message Transforms (SMTs) to add and format timestamp fields in messages before persisting them to MySQL or a file.
+
+These examples facilitate understanding and practice with data integration using Kafka Connect, demonstrating steps from generation through consumption and persistence of data, including intermediate transformations.
 -->
 
 # Exemplos de uso de Single Message Transforms (SMT) - InsertField (timestamp) 
