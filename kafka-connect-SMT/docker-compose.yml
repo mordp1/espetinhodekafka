@@ -224,18 +224,18 @@ services:
   #     - POSTGRES_PASSWORD=confluent2021
   #     - POSTGRES_DB=postgres
 
-  # kafkacat:
-  #   image: edenhill/kcat:1.7.0
-  #   container_name: kafkacat
-  #   links:
-  #     - broker
-  #     - schema-registry
-  #   entrypoint: 
-  #     - /bin/sh 
-  #     - -c 
-  #     - |
-  #       apk add jq; 
-  #       while [ 1 -eq 1 ];do sleep 60;done
+  kafkacat:
+    image: edenhill/kcat:1.7.1
+    container_name: kafkacat
+    links:
+      - broker
+      - schema-registry
+    entrypoint: 
+      - /bin/sh 
+      - -c 
+      - |
+        apk add jq; 
+        while [ 1 -eq 1 ];do sleep 60;done
 
   connect-ui:
     image: landoop/kafka-connect-ui:latest

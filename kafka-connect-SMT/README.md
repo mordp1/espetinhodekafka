@@ -15,3 +15,6 @@ Robin Moffatt -> https://www.youtube.com/watch?v=3Gj_SoyuTYk&list=PL5T99fPsK7pq7
 
 
 # [Day 1 InsertField](./Day-1-InsertField/README.md)
+# [Day 2 ValueToKey and ExtractField](./Day-2-ValueToKey-and-ExtractField/README.md)
+# [Day 3 Flatten](./Day-3-Flatten/README.md)
+# [Day 4 RegexRouter](./Day-4-RegexRouter/README.md)

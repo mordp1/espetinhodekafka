@@ -14,6 +14,8 @@ Esses exemplos facilitam o entendimento e a prática de integração de dados co
 
 # Exemplos de uso de Single Message Transforms (SMT) - InsertField (timestamp) 
 
+- https://docs.confluent.io/kafka-connectors/transforms/current/insertfield.html
+- https://kafka.apache.org/documentation/#org.apache.kafka.connect.transforms.InsertField 
 
 Iniciar docker
 
@@ -56,16 +58,21 @@ curl -i -X PUT -H  "Content-Type:application/json" \
     }'
 ```
 
+Listar Topicos kcat
+```bash
+docker exec kafkacat kcat -b broker:29092 -L -J | jq '.topics[].topic'|sort
+```
+
 Utilizando o kcat para consumir as mensagens: 
 
 ```bash
-kcat -b localhost:9092 -t transactions -s key=s -s value=avro -r http://localhost:8081
+docker exec kafkacat kcat -b broker:29092 -t transactions -s key=s -s value=avro -r http://schema-registry:8081
 ```
 
 Utilizando o kcat para consumir as mensagens com o [VisiData](https://www.visidata.org/)
 
 ```bash
-kcat -b localhost:9092 -t transactions -s key=s -s value=avro -r http://localhost:8081 -C -e -o-100 | vd --filetype jsonl
+docker exec kafkacat kcat -b broker:29092 -t transactions -s key=s -s value=avro -r http://schema-registry:8081 -C -e -o-100 | vd --filetype jsonl
 ```
 
 Configurar o JdbcSinkConnector connector com mysql

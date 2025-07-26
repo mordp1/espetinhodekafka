@@ -18,16 +18,18 @@ Examples of using Single Message Transforms (SMTs) to add and format timestamp f
 These examples facilitate understanding and practice with data integration using Kafka Connect, demonstrating steps from generation through consumption and persistence of data, including intermediate transformations.
 -->
 
-# Exemplos de uso de Single Message Transforms (SMT) - InsertField (timestamp) 
+# Use Examples for Single Message Transforms (SMT) - InsertField (timestamp):
 
+- https://docs.confluent.io/kafka-connectors/transforms/current/insertfield.html
+- https://kafka.apache.org/documentation/#org.apache.kafka.connect.transforms.InsertField 
 
-Iniciar docker
+Start Docker
 
 ```bash
 docker-compose -f docker-compose.yml up -d
 ```
 
-Esperar Kafka Connect to start up
+Check Kafka until to start up
 
 ```bash
 bash -c ' \
@@ -41,13 +43,13 @@ curl -s http://localhost:8083/connector-plugins | jq
 '
 ```
 
-Verificar os plugins do Kafka Connect
+Check the plugins of Kafka Connect
 
 ```bash
 curl -s http://localhost:8083/connector-plugins | jq 
 ```
 
-Vamos utilizar o DatagenConnector para gerar nossas mensagens
+We will use the DatagenConnector to generate our messages
 
 ```bash
 curl -i -X PUT -H  "Content-Type:application/json" \
@@ -62,19 +64,19 @@ curl -i -X PUT -H  "Content-Type:application/json" \
     }'
 ```
 
-Utilizando o kcat para consumir as mensagens: 
+Using kcat to consume the messages
 
 ```bash
-kcat -b localhost:9092 -t transactions -s key=s -s value=avro -r http://localhost:8081
+docker exec kafkacat kcat -b broker:29092 -t transactions -s key=s -s value=avro -r http://schema-registry:8081
 ```
 
-Utilizando o kcat para consumir as mensagens com o [VisiData](https://www.visidata.org/)
+Using kcat to consume the messages with [VisiData](https://www.visidata.org/)
 
 ```bash
-kcat -b localhost:9092 -t transactions -s key=s -s value=avro -r http://localhost:8081 -C -e -o-100 | vd --filetype jsonl
+docker exec kafkacat kcat -b broker:29092 -t transactions -s key=s -s value=avro -r http://schema-registry:8081 -C -e -o-100 | vd --filetype jsonl
 ```
 
-Configurar o JdbcSinkConnector connector com mysql
+Configure the JdbcSinkConnector connector with MySQL
 
 ```bash
 curl -i -X PUT "Accept:application/json" \
@@ -90,13 +92,13 @@ curl -i -X PUT "Accept:application/json" \
         }'
 ```
 
-Podemos ver as mensagens no banco
+We can view the messages in the database
 
 ```bash
 docker exec -it mysql mysql -u mysqluser -pmysqlpw demo -e "SELECT * FROM transactions;"
 ```
 
-Poderia ser em um S3, mas vamos apenas criar um arquivo txt com FileStreamSinkConnector.
+It could be in S3, but let’s just create a txt file with FileStreamSinkConnector
 ```bash
 curl -i -X PUT -H "Accept:application/json" \
     -H "Content-Type:application/json" http://localhost:8083/connectors/sink-filestream-00/config \
@@ -108,13 +110,13 @@ curl -i -X PUT -H "Accept:application/json" \
         }'
 ```
 
-Verificar nosso arquivo .txt
+Check our .txt file
 
 ```bash
 docker exec -it connect cat /tmp/kafka-output.txt
 ```
 
-Comando para verificar se nossos connectors estão rodando.
+Command to check if our connectors are running
 
 ```bash
 curl -s "http://localhost:8083/connectors?expand=info&expand=status" | \
@@ -122,8 +124,7 @@ curl -s "http://localhost:8083/connectors?expand=info&expand=status" | \
        column -s : -t| sed 's/\"//g'| sort
 ```
 
-
-Atualizando o JdbcSinkConnector para utilizar o transform, onde vamos adicionar uma nova coluna com timestamp no mysql.
+Updating the JdbcSinkConnector to use the transform, where we will add a new column with a timestamp in MySQL
 
 ```bash
 curl -i -X PUT -H "Accept:application/json" \
@@ -143,7 +144,8 @@ curl -i -X PUT -H "Accept:application/json" \
         }'
 ```
 
-Vamos aplicar a mesma transformação ao FileStreamSinkConnector
+We will apply the same transformation to the FileStreamSinkConnector
+
 ```bash
 curl -i -X PUT -H "Accept:application/json" \
     -H "Content-Type:application/json" http://localhost:8083/connectors/sink-filestream-00/config \
@@ -161,32 +163,32 @@ curl -i -X PUT -H "Accept:application/json" \
           "transforms.formatTS.target.type"     : "string"
         }'
 ```
-# Benefícios de Utilizar o InsertField no SMT do Kafka Connect
+# Benefits of Using InsertField in Kafka Connect SMT
 
 - https://docs.confluent.io/kafka-connectors/transforms/current/insertfield.html
 
 - https://kafka.apache.org/documentation/#org.apache.kafka.connect.transforms.InsertField
 
-O SMT InsertField permite adicionar campos extras a cada mensagem trafegada por um conector no Kafka Connect, seja no valor, na chave ou ambos. Ele pode inserir valores provenientes de metadados da mensagem (como tópico, partição, offset, timestamp) ou incluir um valor totalmente estático e configurável.
+SMT InsertField allows you to add additional fields to each message traveling through a connector in Kafka Connect, either in the value, the key, or both. It can insert values from message metadata (such as topic, partition, offset, or timestamp) or include a completely static and configurable value.
 
-## Por Que Usar o InsertField
-- Enriquecimento de Dados: Você pode enriquecer as mensagens, acrescentando informações contextuais importantes antes do dado ser enviado ao sistema de destino, sem alterar os conectores nem implementar lógica adicional externa.
+## Why Use InsertField
+- Data Enrichment: You can enrich the messages by adding important contextual information before the data is sent to the target system, without changing connectors or implementing external logic.
 
-- Padronização e Auditoria: Inserir campos como timestamp, nome do tópico, partição ou outros metadados facilita rastrear, auditar e padronizar entradas em bancos de dados, data lakes, sistemas analíticos, etc.
+- Standardization and Auditing: Adding fields like timestamp, topic name, partition or other metadata makes it easier to track, audit, and standardize entries in databases, data lakes, analytic systems, etc.
 
-- Facilidade de Integração: Sistemas de destino muitas vezes precisam de campos extras (como identificadores, origens ou datas de processamento) que não estão no dado original – InsertField permite atender esse requisito sem modificar a aplicação ou fluxo de origem.
+- Ease of Integration: Target systems often require extra fields (such as identifiers, origin, or processing dates) that are absent in the original data – InsertField meets this need without modifying the source application or data flow.
 
-- Rapidez e Simplicidade: Tudo é feito por configuração, eliminando a necessidade de desenvolver, manter e versionar código customizado para simples transformações.
+- Speed and Simplicity: Everything is handled through configuration, removing the need to develop, maintain, and version custom code for simple transformations.
 
-## Casos de Uso Comuns
-- Adição de Campos de Timestamp: Inserir um campo com o timestamp do processamento da mensagem ao exportar dados para sistemas de armazenamento, como bancos SQL ou S3 – útil para rastrear quando aquele dado foi ingerido ou exportado.
+## Common Use Cases
+- Adding Timestamp Fields: Insert a field with the message processing timestamp when exporting data to storage systems, like SQL databases or S3 – useful for tracking when data was ingested or exported.
 
-- Inclusão de Metadados do Kafka: Adicionar informações como nome do tópico, partição e offset em cada registro, facilitando investigações, debugging e análise posterior.
+- Including Kafka Metadata: Add information such as topic name, partition, and offset to each record, facilitating investigations, debugging, and later analysis.
 
-- Tagueamento de Origem: Incluir um campo estático indicando a origem do dado, como "fonte": "Kafka Connect", para uso em pipelines onde múltiplas fontes coexistem.
+- Source Tagging: Include a static field such as "source": "Kafka Connect" for pipelines integrating data from multiple sources.
 
-- Configuração de Time-To-Live: Inserir um campo de TTL (Time To Live) em plataformas como Cosmos DB, permitindo controle do tempo de vida de cada registro exportado.
+- Time-To-Live Configuration: Insert a TTL (Time To Live) field in platforms like Cosmos DB to control how long each exported record lives.
 
-- Facilitar Processos de UPSERT: Adicionar um campo auxiliar como chave única artificial quando os dados de origem não ajudam na identificação unívoca do registro em processos de upsert em bancos relacionais.
+- Facilitating UPSERT Processes: Add an auxiliary field as an artificial unique key when source data lacks a natural unique identifier for upsert operations in relational databases.
 
-- Adaptação de Schema: Quando o destino exige obrigatoriamente certos campos, InsertField pode garantir que todos os registros recebam esse campo, mesmo que não exista na origem.
+- Schema Adaptation: When the sink system requires certain mandatory fields, InsertField makes sure all records include them, even if they weren't in the source.
