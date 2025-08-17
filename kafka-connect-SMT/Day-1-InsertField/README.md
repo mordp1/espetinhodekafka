@@ -66,7 +66,7 @@ docker exec kafkacat kcat -b broker:29092 -L -J | jq '.topics[].topic'|sort
 Utilizando o kcat para consumir as mensagens: 
 
 ```bash
-docker exec kafkacat kcat -b broker:29092 -t transactions -s key=s -s value=avro -r http://schema-registry:8081
+docker exec kafkacat kcat -b broker:29092 -r http://schema-registry:8081 -s key=s -s value=avro -t transactions -C -c1 -o beginning -u -q -J | jq '.'
 ```
 
 Utilizando o kcat para consumir as mensagens com o [VisiData](https://www.visidata.org/)
