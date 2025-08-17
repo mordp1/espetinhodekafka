@@ -105,7 +105,7 @@ curl -i -X PUT -H "Accept:application/json" \
         }'
 ```
 
-Create JdbcSinkConnector with MaskField
+Create JdbcSinkConnector with MaskField remove replacement
 ```bash
 curl -i -X PUT -H "Accept:application/json" \
     -H  "Content-Type:application/json" http://localhost:8083/connectors/sink-jdbc-mysql-day4-transactions-00/config \

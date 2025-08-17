@@ -36,6 +36,11 @@ curl -s http://localhost:8083/connector-plugins | jq
 '
 ```
 
+
+```bash
+docker exec -it mysql mysql -u mysqluser -pmysqlpw demo -e "SELECT * FROM customers;"
+```
+
 Configurar o JdbcSourceConnector connector com mysql com MaskField
 ```bash
 curl -i -X PUT -H  "Content-Type:application/json" \
@@ -66,7 +71,7 @@ docker exec kafkacat kcat -b broker:29092 -L -J | jq '.topics[].topic'|sort
 
 Utilizando o kcat para consumir as mensagens: 
 ```bash
-docker exec kafkacat kcat -b broker:29092 -t mysql-01-customers -s key=s -s value=avro -r http://schema-registry:8081
+docker exec kafkacat kcat -b broker:29092 -t mysql-01-customers -s key=s -s value=avro -r http://schema-registry:8081 -C -c1 -o beginning -u -q -J | jq '.'
 ```
 
 Vamos utilizar o DatagenConnector para gerar nossas mensagens
@@ -83,7 +88,7 @@ curl -i -X PUT -H  "Content-Type:application/json" \
     }'
 ```
 
-Criar JdbcSinkConnector com MaskField
+Criar JdbcSinkConnector com MaskField substituindo email e phone.
 ```bash
 curl -i -X PUT -H "Accept:application/json" \
     -H  "Content-Type:application/json" http://localhost:8083/connectors/sink-jdbc-mysql-day4-transactions-00/config \
@@ -106,7 +111,7 @@ curl -i -X PUT -H "Accept:application/json" \
         }'
 ```
 
-Criar JdbcSinkConnector com MaskField
+Criar JdbcSinkConnector com MaskField ignorando email e phone.
 ```bash
 curl -i -X PUT -H "Accept:application/json" \
     -H  "Content-Type:application/json" http://localhost:8083/connectors/sink-jdbc-mysql-day4-transactions-00/config \
