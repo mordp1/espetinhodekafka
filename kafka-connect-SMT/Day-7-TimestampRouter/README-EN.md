@@ -1,35 +1,32 @@
 <!--
-This README documents the use of Kafka Connect for data integration between Kafka and other systems, including MySQL and local files. The main topics covered are:
+# Kafka Connect SMT Usage Examples - TimestampRouter
 
-Checking the available plugins in Kafka Connect.
+This document presents practical examples of how to use Single Message Transforms (SMT) in Kafka Connect, focusing on the use of `TimestampRouter` for timestamp-based message routing. The following topics are covered:
 
-Using the Datagen Connector to generate mock messages in the transactions topic.
+- Initializing the Docker environment with Kafka Connect.
+- Checking the status of Kafka Connect and available plugins.
+- Using the DatagenConnector to generate sample messages.
+- Listing Kafka topics using kcat.
+- Consuming messages from topics with kcat, including Avro and Schema Registry support.
+- Configuring the JdbcSinkConnector for data persistence in MySQL, demonstrating the use of the SMT `TimestampRouter` to create dynamic topics based on timestamp.
+- Querying persisted data in MySQL.
+- References to official documentation for the SMTs used, including InsertField and TimestampRouter.
 
-Consuming Kafka messages using kcat, with an option to visualize via VisiData.
-
-Configuring the JdbcSinkConnector to persist data from the transactions topic into a MySQL table, including data query commands.
-
-Alternative method for data persistence to a text file using the FileStreamSinkConnector.
-
-Command to list and check the status of configured connectors.
-
-Examples of using Single Message Transforms (SMTs) to add and format timestamp fields in messages before persisting them to MySQL or a file.
-
-These examples facilitate understanding and practice with data integration using Kafka Connect, demonstrating steps from generation through consumption and persistence of data, including intermediate transformations.
+The goal is to demonstrate how to enrich and dynamically route messages in data pipelines using Kafka Connect, making it easier to organize and partition data by date or other temporal criteria.
 -->
 
-# Use Examples for Single Message Transforms (SMT) - InsertField (timestamp):
+# Examples of Using Single Message Transforms (SMT) - TimestampRouter
 
 - https://docs.confluent.io/kafka-connectors/transforms/current/insertfield.html
 - https://kafka.apache.org/documentation/#org.apache.kafka.connect.transforms.InsertField 
 
-Start Docker
+Start docker
 
 ```bash
 docker-compose -f docker-compose.yml up -d
 ```
 
-Check Kafka until to start up
+Wait for Kafka Connect to start up
 
 ```bash
 bash -c ' \
@@ -38,106 +35,120 @@ while [ $(curl -s -o /dev/null -w %{http_code} http://localhost:8083/connectors)
   echo -e "\t" $(date) " Kafka Connect listener HTTP state: " $(curl -s -o /dev/null -w %{http_code} http://localhost:8083/connectors) " (waiting for 200)"
   sleep 5
 done
-echo -e $(date) "\n\n--------------\n\o/ Kafka Connect is ready! Listener HTTP state: " $(curl -s -o /dev/null -w %{http_code} http://localhost:8083/connectors) "\n--------------\n"
+echo -e $(date) "\n\n--------------\n\o/ Kafka Connect is ready! Listener HTTP state: " $(curl -s -o /dev/null -w %{http_code} http://localhost:-+-+-+-+-+
+<!--
+# Kafka Connect SMT - TimestampRouter: Practical Guide
+
+This guide provides hands-on instructions for leveraging Single Message Transforms (SMT) in Kafka Connect, with an emphasis on the `TimestampRouter` transform for routing messages based on their timestamps. Covered topics include:
+
+- Setting up Kafka Connect using Docker Compose.
+- Inspecting Kafka Connect's operational status and installed plugins.
+- Generating example data with the DatagenConnector.
+- Listing Kafka topics with kcat.
+- Consuming topic messages using kcat, including Avro and Schema Registry integration.
+- Configuring JdbcSinkConnector to persist data in MySQL, showcasing dynamic topic creation with `TimestampRouter`.
+- Querying stored records in MySQL.
+- Reference links for official documentation on InsertField and TimestampRouter SMTs.
+
+The aim is to illustrate how to enrich and route messages dynamically within Kafka Connect pipelines, supporting data organization and partitioning by time or other temporal attributes.
+-->
+
+# Kafka Connect SMT: TimestampRouter Usage Examples
+
+- [InsertField SMT Documentation](https://docs.confluent.io/kafka-connectors/transforms/current/insertfield.html)
+- [Kafka InsertField Transform](https://kafka.apache.org/documentation/#org.apache.kafka.connect.transforms.InsertField)
+
+## Launching the Environment
+
+Start the required services:
+
+```bash
+docker-compose -f docker-compose.yml up -d
+```
+
+## Confirm Kafka Connect Availability
+
+Wait for Kafka Connect to become ready:
+
+```bash
+until [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8083/connectors)" -eq 200 ]; do
+  echo "Waiting for Kafka Connect..."
+  sleep 5
+done
+echo "Kafka Connect is up!"
 curl -s http://localhost:8083/connector-plugins | jq
-'
 ```
 
-Check the plugins of Kafka Connect
+## List Available Plugins
 
 ```bash
-curl -s http://localhost:8083/connector-plugins | jq 
+curl -s http://localhost:8083/connector-plugins | jq
 ```
 
-We will use the `DatagenConnector` to generate our messages with `InsertField$Value`
+## Generate Example Messages
+
+Set up the DatagenConnector:
 
 ```bash
-curl -i -X PUT -H  "Content-Type:application/json" \
-    http://localhost:8083/connectors/source-voluble-datagen-00/config \
-    -d '{
-        "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
-        "kafka.topic": "transactions",
-        "quickstart": "transactions",
-        "value.converter.schemas.enable": "false",
-        "max.interval": 1000,
-        "tasks.max": "1",
-        "transforms"                                : "insertStaticField1,insertStaticField2",
-        "transforms.insertStaticField1.type"        : "org.apache.kafka.connect.transforms.InsertField$Value",
-        "transforms.insertStaticField1.static.field": "sourceSystem",
-        "transforms.insertStaticField1.static.value": "NeverGonna",
-        "transforms.insertStaticField2.type"        : "org.apache.kafka.connect.transforms.InsertField$Value",
-        "transforms.insertStaticField2.static.field": "ingestAgent",
-        "transforms.insertStaticField2.static.value": "GiveYouUp"
-    }'
+curl -i -X PUT -H "Content-Type:application/json" \
+  http://localhost:8083/connectors/source-voluble-datagen-00/config \
+  -d '{
+    "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
+    "kafka.topic": "transactions",
+    "quickstart": "transactions",
+    "value.converter.schemas.enable": "false",
+    "max.interval": 1000,
+    "tasks.max": "1"
+  }'
 ```
 
-List Topics with kcat
+## List Kafka Topics
+
 ```bash
-docker exec kafkacat kcat -b broker:29092 -L -J | jq '.topics[].topic'|sort
+docker exec kafkacat kcat -b broker:29092 -L -J | jq '.topics[].topic' | sort
 ```
 
-Consuming messages with Kcat: 
+## Consume Messages with kcat
 
 ```bash
 docker exec kafkacat kcat -b broker:29092 -r http://schema-registry:8081 -s key=s -s value=avro -t transactions -C -c1 -o beginning -u -q -J | jq '.'
 ```
 
-Configure the JdbcSinkConnector connector with MySQL and `InsertField$Value`
+## Configure JdbcSinkConnector with TimestampRouter
 
 ```bash
-curl -i -X PUT "Accept:application/json" \
-    -H  "Content-Type:application/json" http://localhost:8083/connectors/sink-jdbc-mysql-00/config \
-    -d '{
-          "connector.class"     : "io.confluent.connect.jdbc.JdbcSinkConnector",
-          "connection.url"      : "jdbc:mysql://mysql:3306/demo",
-          "connection.user"     : "mysqluser",
-          "connection.password" : "mysqlpw",
-          "topics"              : "transactions",
-          "tasks.max"           : "1",
-          "auto.create"         : "true",
-          "transforms"                                : "insertPartition,insertOffset,insertTopic",
-          "transforms.insertPartition.type"           : "org.apache.kafka.connect.transforms.InsertField$Value",
-          "transforms.insertPartition.partition.field": "kafkaPartition",
-          "transforms.insertOffset.type"              : "org.apache.kafka.connect.transforms.InsertField$Value",
-          "transforms.insertOffset.offset.field"      : "kafkaOffset",
-          "transforms.insertTopic.type"               : "org.apache.kafka.connect.transforms.InsertField$Value",
-          "transforms.insertTopic.topic.field"        : "kafkaTopic"          
-        }'
+curl -i -X PUT -H "Content-Type:application/json" \
+  http://localhost:8083/connectors/sink-jdbc-mysql-00/config \
+  -d '{
+    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+    "connection.url": "jdbc:mysql://mysql:3306/demo",
+    "connection.user": "mysqluser",
+    "connection.password": "mysqlpw",
+    "topics": "transactions",
+    "tasks.max": "1",
+    "auto.create": "true",
+    "transforms": "addTimestampToTopic",
+    "transforms.addTimestampToTopic.type": "org.apache.kafka.connect.transforms.TimestampRouter",
+    "transforms.addTimestampToTopic.topic.format": "${topic}_${timestamp}",
+    "transforms.addTimestampToTopic.timestamp.format": "YYYY-MM-dd"
+  }'
 ```
 
-Check messages on DB
+## Query Data in MySQL
 
 ```bash
-docker exec -it mysql mysql -u mysqluser -pmysqlpw demo -e "SELECT * FROM transactions;"
+docker exec -it mysql mysql -u mysqluser -pmysqlpw demo -e "SHOW TABLES;"
+docker exec -it mysql mysql -u mysqluser -pmysqlpw demo -e "SELECT * FROM \`transactions_2025-09-13\`;"
 ```
 
+# Why Use TimestampRouter in Kafka Connect SMT?
 
-# Benefits of Using InsertField in Kafka Connect SMT
+- **Temporal Data Organization:** Automatically routes records to topics named by date/time, simplifying time-based partitioning.
+- **Easier Data Management:** Enables straightforward retention, archival, and deletion of old data by topic.
+- **Destination Compatibility:** Many sinks (e.g., Elasticsearch, databases) use topic names for index/table names; TimestampRouter helps encode time granularity in those names.
+- **Flexible Configuration:** Customize timestamp and topic formats using Java date patterns.
+- **No Producer Changes Needed:** All transformations occur within Kafka Connect, requiring no changes to producing applications.
 
-- https://docs.confluent.io/kafka-connectors/transforms/current/insertfield.html
-
-- https://kafka.apache.org/documentation/#org.apache.kafka.connect.transforms.InsertField
-
-SMT InsertField allows you to add additional fields to each message traveling through a connector in Kafka Connect, either in the value, the key, or both. It can insert values from message metadata (such as topic, partition, offset, or timestamp) or include a completely static and configurable value.
-
-## Why Use InsertField
-- Data Enrichment: You can enrich the messages by adding important contextual information before the data is sent to the target system, without changing connectors or implementing external logic.
-
-- Standardization and Auditing: Adding fields like timestamp, topic name, partition or other metadata makes it easier to track, audit, and standardize entries in databases, data lakes, analytic systems, etc.
-
-- Ease of Integration: Target systems often require extra fields (such as identifiers, origin, or processing dates) that are absent in the original data – InsertField meets this need without modifying the source application or data flow.
-
-- Speed and Simplicity: Everything is handled through configuration, removing the need to develop, maintain, and version custom code for simple transformations.
-
-## Common Use Cases
-- Adding Timestamp Fields: Insert a field with the message processing timestamp when exporting data to storage systems, like SQL databases or S3 – useful for tracking when data was ingested or exported.
-
-- Including Kafka Metadata: Add information such as topic name, partition, and offset to each record, facilitating investigations, debugging, and later analysis.
-
-- Source Tagging: Include a static field such as "source": "Kafka Connect" for pipelines integrating data from multiple sources.
-
-- Time-To-Live Configuration: Insert a TTL (Time To Live) field in platforms like Cosmos DB to control how long each exported record lives.
-
-- Facilitating UPSERT Processes: Add an auxiliary field as an artificial unique key when source data lacks a natural unique identifier for upsert operations in relational databases.
-
-- Schema Adaptation: When the sink system requires certain mandatory fields, InsertField makes sure all records include them, even if they weren't in the source.
+- [TimestampRouter SMT Documentation](https://docs.confluent.io/kafka-connectors/transforms/current/timestamprouter.html)
+- [Kafka TimestampRouter Transform](https://kafka.apache.org/documentation/#org.apache.kafka.connect.transforms.TimestampRouter)
+- [Confluent Demo - kafka-connect-single-message-transforms](https://github.com/confluentinc/demo-scene/blob/master/kafka-connect-single-message-transforms/day7.adoc)
