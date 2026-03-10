@@ -1,0 +1,88 @@
+services:
+  # Source Kafka Cluster
+  kafka-source:
+    image: apache/kafka-native:4.1.1
+    #image: confluentinc/cp-kafka:latest
+    hostname: kafka-source
+    container_name: kafka-source
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka-source:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka-source:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka-source:29092,CONTROLLER://kafka-source:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+
+  # Target Kafka Cluster
+  kafka-target:
+    image: apache/kafka-native:4.1.1
+    #image: confluentinc/cp-kafka:latest
+    hostname: kafka-target
+    container_name: kafka-target
+    ports:
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka-target:39094,PLAINTEXT_HOST://localhost:9094'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka-target:39093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka-target:39094,CONTROLLER://kafka-target:39093,PLAINTEXT_HOST://0.0.0.0:9094'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+
+  kafbat-ui:
+    container_name: kafbat-ui
+    image: ghcr.io/kafbat/kafka-ui:v1.4.2
+    ports:
+      - 8090:8080
+    environment:
+      KAFKA_CLUSTERS_0_NAME: kafka-source
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-source:29092
+      KAFKA_CLUSTERS_1_NAME: kafka-target
+      KAFKA_CLUSTERS_1_BOOTSTRAPSERVERS: kafka-target:39094
+
+  # # Produce test messages
+  # kafka-init:
+  #   image: apache/kafka-native:4.1.1
+  #   #image: confluentinc/cp-kafka:latest
+  #   depends_on:
+  #     - kafka-source
+  #     - kafka-target
+  #   entrypoint: ['/bin/bash', '-c']
+  #   command:
+  #     - |
+  #       echo "Waiting for Kafka clusters to start..."
+  #       sleep 20
+        
+  #       echo "Producing 5 test messages to source cluster..."
+  #       for i in {1..5}; do
+  #         echo "Message $$i: Test message from source at $$(date)" | kafka-console-producer --bootstrap-server kafka-source:29092 --topic test-topic
+  #       done
+        
+  #       echo ""
+  #       echo "✓ 5 test messages produced to source cluster!"
+  #       echo ""
+
+
+volumes:
+  kafka-source-data:
+  kafka-target-data:

@@ -269,7 +269,7 @@ Antes de executar benchmarks do Kafka, estabeleça uma baseline para a performan
 ```bash
 # Testar throughput de escrita (arquivo de 1GB)
 # Substitua /var/lib/kafka/data pelo seu diretório de dados do Kafka
-dd if=/dev/zero of=/tmpfile bs=1M count=1024 conv=fsync
+dd if=/dev/zero of=/tmp/tmpfile bs=1M count=1024 conv=fsync
 
 # Exemplo de saída:
 # 1024+0 records in
@@ -287,10 +287,10 @@ dd if=/dev/zero of=/tmpfile bs=1M count=1024 conv=fsync
 
 ```bash
 # Testar throughput de leitura
-dd if=/var/lib/kafka/data/tmpfile of=/dev/null bs=1M count=1024
+dd if=/tmp/tmpfile of=/dev/null bs=1M count=1024
 
 # Limpar arquivo de teste após os testes
-rm /var/lib/kafka/data/tmpfile
+rm /tmp/tmpfile
 ```
 
 **Interpretação:**

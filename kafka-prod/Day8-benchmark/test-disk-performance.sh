@@ -46,7 +46,7 @@ echo "Writing ${FILE_SIZE_MB}MB to disk..."
 echo ""
 
 WRITE_START=$(date +%s.%N)
-dd if=/dev/zero of="$TEST_FILE" bs=1M count="$FILE_SIZE_MB" conv=fdatasync 2>&1
+dd if=/dev/zero of="$TEST_FILE" bs=1M count="$FILE_SIZE_MB" conv=fsync 2>&1
 WRITE_END=$(date +%s.%N)
 
 WRITE_TIME=$(echo "$WRITE_END - $WRITE_START" | bc)
@@ -104,4 +104,3 @@ echo "  - SSD typically: 200-500 MB/s write, 400-600 MB/s read"
 echo "  - HDD typically: 50-150 MB/s write, 100-200 MB/s read"
 echo "  - If values are lower, disk may be a bottleneck for Kafka"
 echo ""
-
