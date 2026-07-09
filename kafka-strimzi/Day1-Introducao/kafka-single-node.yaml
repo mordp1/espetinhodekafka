@@ -16,7 +16,6 @@ spec:
         type: ephemeral
         kraftMetadata: shared
 ---
-
 apiVersion: kafka.strimzi.io/v1
 kind: Kafka
 metadata:

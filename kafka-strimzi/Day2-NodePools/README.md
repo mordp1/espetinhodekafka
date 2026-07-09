@@ -87,7 +87,7 @@ Day2-NodePools/
 ## 5. Subindo o Cluster Kind (multi-node)
 
 ```bash
-kind create cluster --config kind-config.yaml --name strimzi-day2
+kind create cluster --config=kind-config.yaml --name strimzi-day2
 ```
 
 ```yaml
