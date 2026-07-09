@@ -94,14 +94,15 @@ Guia completo para preparar e operar Kafka em ambientes de produção, cobrindo 
 
 ### 🟣 Kafka no Kubernetes — Strimzi
 
-Laboratório completo para rodar Apache Kafka no Kubernetes com o operador Strimzi.
+Série sobre como rodar Apache Kafka no Kubernetes com o operador Strimzi, usando **kind**
+para montar o laboratório localmente.
 
-- Configuração de cluster via Helm
-- Kafka com 3 Brokers e configurações avançadas
-- Métricas via JMX, Prometheus e Grafana
-- Ingress e acesso externo ao cluster
+| Episódio | Tema |
+|---|---|
+| Day 1 | [Strimzi Operator - Kafka no Kubernetes](https://www.youtube.com/watch?v=Sw8seG0h3q8) |
+| Day 2 | Kafka Node Pools — KRaft, broker/controller separados e storage persistente |
 
-📁 [kafka-strimzi/README.md](kafka-strimzi/README.md)
+📁 [kafka-strimzi/Day1-Introducao/](kafka-strimzi/Day1-Introducao/) · [kafka-strimzi/Day2-NodePools/](kafka-strimzi/Day2-NodePools/)
 
 ---
 
