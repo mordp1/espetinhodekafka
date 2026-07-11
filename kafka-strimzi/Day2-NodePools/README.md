@@ -250,7 +250,12 @@ Fica de gancho para explorar (e para os próximos vídeos da série):
 - **Rack awareness** (`rack.topologyKey`) — espalha réplicas entre zonas de disponibilidade.
 - **Tiered Storage** — offload de segmentos antigos para object storage (S3, GCS...).
 - **`KafkaUser` + autenticação** (SCRAM/TLS) — este lab não tem autenticação habilitada de
-  propósito, para manter o escopo enxuto; é o assunto natural do próximo Day da série.
+  propósito, para manter o escopo enxuto; é o assunto natural de um próximo Day da série.
+
+> Quer ir mais fundo em Node Pools antes de partir para autenticação? O
+> [Day 3](../Day3-NodePools-Avancado/) cobre gestão de node IDs, storage/scheduling
+> diferentes por pool e os padrões de quorum de controller no KRaft — direto dos posts
+> oficiais do blog do Strimzi sobre o assunto.
 
 ## 12. Cleanup
 
@@ -274,4 +279,4 @@ kind delete cluster --name strimzi-day2
 ---
 
 > Parte da série **Espetinho de Kafka** — Strimzi Day 2: Kafka Node Pools.
-> Próximo Day: autenticação e autorização (SCRAM/TLS + ACLs) com `KafkaUser`.
+> Próximo Day: [Node Pools Avançado](../Day3-NodePools-Avancado/) — node IDs, storage/scheduling por pool e quorum de controller.
