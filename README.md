@@ -101,8 +101,9 @@ para montar o laboratório localmente.
 |---|---|
 | Day 1 | [Strimzi Operator - Kafka no Kubernetes](https://www.youtube.com/watch?v=Sw8seG0h3q8) |
 | Day 2 | Kafka Node Pools — KRaft, broker/controller separados e storage persistente |
+| Day 3 | Kafka Node Pools Avançado — node IDs, storage/scheduling por pool e quorum de controller |
 
-📁 [kafka-strimzi/Day1-Introducao/](kafka-strimzi/Day1-Introducao/) · [kafka-strimzi/Day2-NodePools/](kafka-strimzi/Day2-NodePools/)
+📁 [kafka-strimzi/Day1-Introducao/](kafka-strimzi/Day1-Introducao/) · [kafka-strimzi/Day2-NodePools/](kafka-strimzi/Day2-NodePools/) · [kafka-strimzi/Day3-NodePools-Avancado/](kafka-strimzi/Day3-NodePools-Avancado/)
 
 ---
 
