@@ -42,6 +42,15 @@ Este Day 3 reproduz e valida, na prática, os pontos centrais desses 5 posts —
 mostrando o que aconteceu quando esse roadmap de 2023 virou realidade no **Strimzi 1.1.0**
 que estamos usando (seção 11).
 
+> **Por que Node Pools não é só "boas práticas":** um dos pré-requisitos oficiais para
+> migrar um cluster **Zookeeper → KRaft** no Strimzi é o cluster já estar rodando com
+> `KafkaNodePool` habilitado. Da documentação: *"One of the main prerequisites for the
+> migration is having the ZooKeeper-based cluster using the `KafkaNodePool` resource(s) to
+> run the brokers."* Ou seja, se você ainda está num cluster antigo, dual-role, sem Node
+> Pools, o primeiro passo antes de sequer cogitar a migração para KRaft é adotar a
+> arquitetura que vimos no [Day 2](../Day2-NodePools/) e aprofundamos aqui. Detalhes no post
+> oficial: [Strimzi ZooKeeper to KRaft Migration](https://strimzi.io/blog/2024/03/22/strimzi-kraft-migration/).
+
 ## 2. Pré-requisitos
 
 - [Docker](https://docs.docker.com/get-docker/) com pelo menos ~4GB de RAM livres
@@ -300,6 +309,7 @@ kind delete cluster --name strimzi-day3
 | Kafka Node Pools — Storage and Scheduling | https://strimzi.io/blog/2023/08/28/kafka-node-pools-storage-and-scheduling/ |
 | Kafka Node Pools — Supporting KRaft | https://strimzi.io/blog/2023/09/11/kafka-node-pools-supporting-kraft/ |
 | Kafka Node Pools — What's Next | https://strimzi.io/blog/2023/09/18/kafka-node-pools-whats-next/ |
+| Strimzi ZooKeeper to KRaft Migration | https://strimzi.io/blog/2024/03/22/strimzi-kraft-migration/ |
 | Strimzi Deploying Guide | https://strimzi.io/docs/operators/latest/deploying |
 | Release usada neste lab (1.1.0) | https://github.com/strimzi/strimzi-kafka-operator/releases/tag/1.1.0 |
 
