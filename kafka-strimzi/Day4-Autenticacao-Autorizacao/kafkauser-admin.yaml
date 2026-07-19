@@ -1,0 +1,12 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata:
+  name: admin
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  # Sem .spec.authorization: o principal "CN=admin" já está em
+  # Kafka.spec.kafka.authorization.superUsers, então o authorizer nem
+  # avalia ACLs para ele — acesso total por definição.
+  authentication:
+    type: tls

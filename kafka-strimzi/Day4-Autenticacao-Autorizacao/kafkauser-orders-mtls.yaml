@@ -1,0 +1,26 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata:
+  name: orders-mtls
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  authentication:
+    type: tls            # mesmo mecanismo do admin, mas sem entrar em spec.kafka.authorization.superUsers
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: orders.
+          patternType: prefix
+        operations:
+          - Write
+          - Read
+          - Describe
+      - resource:
+          type: group
+          name: orders-consumer-
+          patternType: prefix
+        operations:
+          - Read

@@ -1,0 +1,28 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata:
+  name: consumer-orders
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: orders.
+          patternType: prefix
+        operations:
+          - Read
+          - Describe
+      - resource:
+          type: group
+          name: orders-consumer-
+          patternType: prefix
+        operations:
+          - Read
+  quotas:
+    consumerByteRate: 2097152
+    requestPercentage: 25
