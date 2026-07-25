@@ -1,0 +1,64 @@
+# Segunda aplicação, agora consumindo o binding mTLS (orders-mtls-binding). Prova
+# duas coisas ao mesmo tempo: (1) que o binding mTLS chega pronto pra uso sem PKCS12
+# — Kafka moderno (>= 2.7, KIP-651) lê certificado + chave PEM direto via
+# ssl.keystore.type=PEM; e (2) que a ACL de orders-mtls (Read em orders.* +
+# consumer group orders-consumer-) continua valendo, sem nenhuma configuração extra
+# no Access Operator — ele só entrega a credencial, quem decide o que ela pode
+# fazer continua sendo o StandardAuthorizer do Kafka.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-consumer-app
+  labels:
+    app: orders-consumer-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orders-consumer-app
+  template:
+    metadata:
+      labels:
+        app: orders-consumer-app
+    spec:
+      volumes:
+        - name: kafka-binding
+          secret:
+            # Nome custom, definido em spec.secretName da KafkaAccess orders-mtls-access.
+            secretName: orders-mtls-binding
+      containers:
+        - name: consumer
+          image: quay.io/strimzi/kafka:1.1.0-kafka-4.3.0
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              BIND=/bindings/kafka
+
+              # ssl.keystore.type=PEM aceita um único arquivo com o bloco CERTIFICATE
+              # e o bloco PRIVATE KEY concatenados — é isso que o parser de PEM do
+              # Kafka (DefaultSslEngineFactory.FileBasedPemStore) espera.
+              cat "$BIND/ssl.keystore.crt" "$BIND/ssl.keystore.key" > /tmp/keystore.pem
+
+              cat > /tmp/client.properties <<EOF
+              security.protocol=$(cat "$BIND/security.protocol")
+              ssl.truststore.type=PEM
+              ssl.truststore.location=$BIND/ssl.truststore.crt
+              ssl.keystore.type=PEM
+              ssl.keystore.location=/tmp/keystore.pem
+              EOF
+
+              BOOTSTRAP=$(cat "$BIND/bootstrap.servers")
+              echo "Conectando em $BOOTSTRAP via mTLS"
+
+              exec bin/kafka-console-consumer.sh \
+                --bootstrap-server "$BOOTSTRAP" \
+                --topic orders.events \
+                --group orders-consumer-app \
+                --from-beginning \
+                --property print.key=true \
+                --consumer.config /tmp/client.properties
+          volumeMounts:
+            - name: kafka-binding
+              mountPath: /bindings/kafka
+              readOnly: true

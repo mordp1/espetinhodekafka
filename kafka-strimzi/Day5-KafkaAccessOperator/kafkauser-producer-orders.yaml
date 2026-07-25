@@ -1,0 +1,22 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata:
+  name: producer-orders
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: orders.
+          patternType: prefix
+        operations:
+          - Write
+          - Describe
+  quotas:
+    producerByteRate: 1048576
+    requestPercentage: 25

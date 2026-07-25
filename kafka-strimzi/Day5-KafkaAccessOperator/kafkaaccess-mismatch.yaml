@@ -1,0 +1,22 @@
+# Exemplo NEGATIVO, de propósito: aponta pro listener "tls" (mTLS) mas referencia o
+# KafkaUser producer-orders, que é scram-sha-512. O KafkaParser do Access Operator
+# valida a compatibilidade entre authentication do listener e authentication do
+# KafkaUser antes de gerar o Secret — aqui ela falha, e o CR fica preso em
+# Ready=False com a mensagem:
+#   "Provided listener tls and Kafka User do not have compatible authentication
+#    configurations."
+# Nenhum Secret é criado. Ver seção 13 do README para o passo a passo do diagnóstico.
+apiVersion: access.strimzi.io/v1alpha1
+kind: KafkaAccess
+metadata:
+  name: orders-mismatch-access
+spec:
+  kafka:
+    name: my-cluster
+    namespace: kafka
+    listener: tls
+  user:
+    kind: KafkaUser
+    apiGroup: kafka.strimzi.io
+    name: producer-orders
+    namespace: kafka

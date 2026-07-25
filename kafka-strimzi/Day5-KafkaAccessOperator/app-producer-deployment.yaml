@@ -1,0 +1,65 @@
+# Aplicação "de verdade" (um Deployment, não um pod solto de debug) rodando na
+# namespace do time (team-orders), montando o Secret gerado pela KafkaAccess
+# "orders-producer-access" como volume — exatamente a convenção da Service Binding
+# Specification: cada chave do Secret vira um arquivo em
+# $SERVICE_BINDING_ROOT/<binding>/<chave>. Frameworks como Spring Cloud Bindings ou
+# Quarkus fariam essa leitura sozinhos; aqui montamos o client.properties na mão pra
+# deixar explícito o que está dentro do binding.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-producer-app
+  labels:
+    app: orders-producer-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orders-producer-app
+  template:
+    metadata:
+      labels:
+        app: orders-producer-app
+    spec:
+      volumes:
+        - name: kafka-binding
+          secret:
+            # Nome default do Secret = nome da KafkaAccess (não setamos spec.secretName
+            # em kafkaaccess-orders-scram.yaml).
+            secretName: orders-producer-access
+      containers:
+        - name: producer
+          image: quay.io/strimzi/kafka:1.1.0-kafka-4.3.0
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              BIND=/bindings/kafka
+
+              cat > /tmp/client.properties <<EOF
+              security.protocol=$(cat "$BIND/security.protocol")
+              sasl.mechanism=$(cat "$BIND/sasl.mechanism")
+              sasl.jaas.config=$(cat "$BIND/sasl.jaas.config")
+              ssl.truststore.type=PEM
+              ssl.truststore.location=$BIND/ssl.truststore.crt
+              EOF
+
+              BOOTSTRAP=$(cat "$BIND/bootstrap.servers")
+              echo "Conectando em $BOOTSTRAP como $(cat "$BIND/username")"
+
+              i=0
+              while true; do
+                printf 'order-%s:{"orderId":%s,"status":"created"}\n' "$i" "$i" | \
+                  bin/kafka-console-producer.sh \
+                    --bootstrap-server "$BOOTSTRAP" \
+                    --topic orders.events \
+                    --property "parse.key=true" \
+                    --property "key.separator=:" \
+                    --producer.config /tmp/client.properties
+                i=$((i + 1))
+                sleep 5
+              done
+          volumeMounts:
+            - name: kafka-binding
+              mountPath: /bindings/kafka
+              readOnly: true
