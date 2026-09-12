@@ -14,6 +14,34 @@
 > as ressalvas marcadas como "reproduzido neste lab" são bugs reais que apareceram durante
 > esse teste, não hipóteses.
 
+## Ações (goals) que vamos usar neste Day
+
+O `full-rebalance` deste Day ([`kafkarebalance-full.yaml`](kafkarebalance-full.yaml), seção
+8) declara explicitamente estes 13 goals — é neles que o Analyzer do Cruise Control se baseia
+para montar a proposta de rebalanceamento. **Hard** significa que o goal precisa ser
+*executado* na proposta (seção 11 explica por que isso não é o mesmo que "obrigatoriamente
+satisfeito"); **Soft** significa que o Cruise Control tenta otimizar, mas aceita uma proposta
+que não o satisfaça 100% se isso for necessário para atender os hard goals:
+
+| Goal | Hard/Soft | O que faz |
+|---|---|---|
+| `RackAwareGoal` | Hard | Garante que réplicas de uma partição fiquem em racks/zonas diferentes |
+| `ReplicaCapacityGoal` | Hard | Nenhum broker recebe mais réplicas do que o limite configurado |
+| `DiskCapacityGoal` | Hard | Nenhum broker ultrapassa a capacidade de disco (80% por padrão — ver seção 11) |
+| `NetworkInboundCapacityGoal` / `NetworkOutboundCapacityGoal` | Hard | Nenhum broker ultrapassa a capacidade de rede configurada (`brokerCapacity`, seção 12) |
+| `CpuCapacityGoal` | Hard | Nenhum broker ultrapassa a capacidade de CPU configurada (70% por padrão — o mais agressivo) |
+| `ReplicaDistributionGoal` | Soft | Distribui o **número** de réplicas igualmente entre brokers |
+| `DiskUsageDistributionGoal` | Soft | Distribui os **bytes em disco** igualmente entre brokers |
+| `NetworkInboundUsageDistributionGoal` / `NetworkOutboundUsageDistributionGoal` | Soft | Distribui o uso de rede igualmente |
+| `CpuUsageDistributionGoal` | Soft | Distribui o uso de CPU igualmente |
+| `TopicReplicaDistributionGoal` | Soft | Distribui réplicas de **cada tópico** igualmente entre brokers (não só o total) |
+| `LeaderReplicaDistributionGoal` | Soft | Distribui a **liderança** de partições igualmente (quem lidera = quem sofre a carga de I/O de fato) |
+
+O catálogo completo (incluindo os goals que ficam de fora desta lista, como
+`MinTopicLeadersPerBrokerGoal`, `PotentialNwOutGoal`, `LeaderBytesInDistributionGoal` e os
+goals intra-broker de JBOD) está detalhado na seção 11, com a ordem de prioridade real usada
+pelo Analyzer.
+
 ---
 
 ## Índice
@@ -249,8 +277,7 @@ awk "BEGIN{
   for(i=0;i<150000;i++) printf \"order-%d:%s\n\", (i%5000), payload;
 }" | bin/kafka-console-producer.sh --topic orders.created \
   --bootstrap-server my-cluster-kafka-bootstrap:9092 \
-  --property parse.key=true --property key.separator=:
-'
+  --property parse.key=true --property key.separator=:'
 
 # payments.processed — volume baixo de propósito
 kubectl -n kafka run kafka-producer-payments -ti --image=quay.io/strimzi/kafka:1.1.0-kafka-4.3.0 \
