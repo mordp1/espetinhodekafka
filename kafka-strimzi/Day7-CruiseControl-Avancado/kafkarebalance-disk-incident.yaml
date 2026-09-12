@@ -1,0 +1,26 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaRebalance
+metadata:
+  name: disk-incident-rebalance
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  mode: full
+  # Cenário: disco quase cheio num broker específico, agora, produção. Não queremos
+  # esperar (nem pagar o custo de rede de) um rebalance completo com todos os goals —
+  # queremos SÓ resolver disco, o mais rápido possível.
+  goals:
+    - DiskCapacityGoal
+    - DiskUsageDistributionGoal
+  # Sem isto, a proposta falha: o hard.goals do cluster (RackAwareGoal,
+  # ReplicaCapacityGoal, os dois de rede, CpuCapacityGoal, etc.) precisa aparecer na
+  # lista de goals executados — não só o goal de disco. skipHardGoalCheck=true é o que
+  # permite rodar só os dois goals acima. Trade-off explícito: aceitamos não verificar
+  # rack/rede/CPU/etc. NESTA execução para resolver a emergência de disco agora; o
+  # follow-up é um kafkarebalance-full.yaml completo depois que o incidente passar.
+  # Ver README seção 13 para o racional completo.
+  skipHardGoalCheck: true
+  # Protege o tópico financeiro de ser tocado por um rebalance de emergência —
+  # nenhuma réplica de payments.* deve se mover só porque outro broker está com disco
+  # cheio.
+  excludedTopics: "payments\\..*"

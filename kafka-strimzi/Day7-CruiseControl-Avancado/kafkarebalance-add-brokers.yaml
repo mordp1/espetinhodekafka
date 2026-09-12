@@ -1,0 +1,13 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaRebalance
+metadata:
+  name: add-brokers-rebalance
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  mode: add-brokers
+  # ID do broker novo após o "kubectl scale kafkanodepool broker --replicas=4".
+  # Confirme o valor real com "kubectl get kafkanodepool broker -n kafka" antes de aplicar —
+  # 6 é o esperado seguindo a numeração sequencial observada nos Days anteriores.
+  brokers:
+    - 6

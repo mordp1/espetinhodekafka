@@ -1,0 +1,13 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaRebalance
+metadata:
+  name: remove-brokers-rebalance
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  mode: remove-brokers
+  # Mesmo broker que entrou via add-brokers-rebalance — o Cruise Control move todas as
+  # réplicas dele para os demais brokers ANTES de você reduzir o replicas do node pool,
+  # evitando o erro de scale-down manual que vimos no Day 3.
+  brokers:
+    - 6

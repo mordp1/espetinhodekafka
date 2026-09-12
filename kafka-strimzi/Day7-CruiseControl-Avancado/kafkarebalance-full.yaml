@@ -1,0 +1,25 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaRebalance
+metadata:
+  name: full-rebalance
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  # mode: full é o default (poderia omitir) — deixado explícito para clareza no vídeo.
+  # Lista explícita de um subconjunto dos goals default do Cruise Control (ver referências
+  # para a lista completa e a ordem hard/soft). Omitir spec.goals usa o
+  # cruiseControl.config.default.goals do operator.
+  goals:
+    - RackAwareGoal
+    - ReplicaCapacityGoal
+    - DiskCapacityGoal
+    - NetworkInboundCapacityGoal
+    - NetworkOutboundCapacityGoal
+    - CpuCapacityGoal
+    - ReplicaDistributionGoal
+    - DiskUsageDistributionGoal
+    - NetworkInboundUsageDistributionGoal
+    - NetworkOutboundUsageDistributionGoal
+    - CpuUsageDistributionGoal
+    - TopicReplicaDistributionGoal
+    - LeaderReplicaDistributionGoal

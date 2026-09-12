@@ -1,0 +1,25 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: broker
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  replicas: 3
+  roles:
+    - broker
+  storage:
+    type: jbod
+    # Duas volumes por broker (vs uma no Day 6) — pré-requisito para o rebalanceamento
+    # intra-broker (disk-to-disk) da seção 5: sem múltiplos discos, "rebalanceDisk: true"
+    # e "mode: remove-disks" não têm o que fazer.
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 6Gi
+        deleteClaim: true
+        kraftMetadata: shared
+      - id: 1
+        type: persistent-claim
+        size: 6Gi
+        deleteClaim: true

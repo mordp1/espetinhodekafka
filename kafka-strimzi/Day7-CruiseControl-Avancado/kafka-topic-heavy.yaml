@@ -1,0 +1,14 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: shop.events
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  # Bastante partição de propósito: dá ao Cruise Control algo real para redistribuir
+  # entre brokers/discos nas seções 8 a 10.
+  partitions: 12
+  replicas: 3
+  config:
+    retention.ms: 604800000
+    segment.bytes: 1073741824

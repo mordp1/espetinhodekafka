@@ -1,0 +1,67 @@
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: my-cluster
+spec:
+  kafka:
+    version: 4.3.0
+    metadataVersion: 4.3-IV0
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+    config:
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      default.replication.factor: 3
+      min.insync.replicas: 2
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+  cruiseControl:
+    config:
+      # Os 5 tipos de anomalia do Anomaly Detector — ver seção 16. Neste Day habilitamos
+      # broker failure (igual ao básico do Day 6) E goal violation E disk failure, pra
+      # termos self-healing de verdade pra demonstrar. metric.anomaly e topic.anomaly
+      # ficam desligados de propósito (ver ressalvas na seção 16).
+      self.healing.broker.failure.enabled: "true"
+      self.healing.goal.violation.enabled: "true"
+      self.healing.disk.failure.enabled: "true"
+      self.healing.metric.anomaly.enabled: "false"
+      self.healing.topic.anomaly.enabled: "false"
+    # brokerCapacity: sem isso, o Cruise Control assume 1 CORE de CPU por broker (issue
+    # strimzi-kafka-operator#5951) e os defaults de rede do upstream (10000KiB/s = ~10MB/s
+    # por broker) — irrealista mesmo pra um kind local, e baixo o bastante pra derrubar
+    # NetworkInboundCapacityGoal com o burst de carga da seção 7 (reproduzido e documentado
+    # na seção 12; mesma categoria de bug do "1 core" de CPU, só que pra rede).
+    brokerCapacity:
+      cpu: "2"
+      inboundNetwork: 200000KiB/s
+      outboundNetwork: 200000KiB/s
+      # Overrides por broker: útil quando o hardware é heterogêneo (ex.: um node pool
+      # rodando em instâncias maiores que as outras). Em kind os 3 workers são
+      # fisicamente idênticos — isso aqui é ilustrativo da SINTAXE, não uma correção real
+      # de assimetria neste lab local. IMPORTANTE: o ID aqui precisa ser um broker de
+      # verdade — neste lab o node pool "controller" fica com os IDs mais altos (3,4,5) e
+      # "broker" com os mais baixos (0,1,2); usar um ID de controller (ex.: 3) aqui não dá
+      # erro na hora do apply, mas o override simplesmente não se aplica a nenhum broker
+      # real (reproduzido neste lab). Confira os NODEIDS reais do node pool broker antes
+      # de assumir qual ID usar (seção 6).
+      overrides:
+        - brokers: [0]
+          cpu: "4"
+          inboundNetwork: 400000KiB/s
+          outboundNetwork: 400000KiB/s
+    # autoRebalance NÃO está habilitado aqui de propósito — reproduzimos ao vivo o que
+    # acontece se ele já estiver ligado no deploy inicial: no primeiro "kubectl scale
+    # kafkanodepool broker --replicas=4", o operator dispara o add-brokers sozinho ANTES
+    # que você consiga aplicar o kafkarebalance-add-brokers.yaml manual da seção 9 — a
+    # demonstração manual de add-brokers/remove-brokers nunca chega a rodar do jeito que
+    # está documentado. autoRebalance é habilitado só na seção 17, via "kubectl edit"/
+    # patch, depois que as seções 8-16 já rodaram o fluxo manual.

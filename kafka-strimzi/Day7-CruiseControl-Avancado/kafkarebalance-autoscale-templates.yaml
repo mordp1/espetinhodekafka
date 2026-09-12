@@ -1,0 +1,28 @@
+# Templates referenciados por spec.cruiseControl.autoRebalance no kafka-cluster.yaml
+# (README seção 17). Não são pedidos de rebalance — a anotação
+# strimzi.io/rebalance-template: "true" marca cada um como configuração-base que o
+# Cluster Operator usa para MONTAR um KafkaRebalance de verdade sozinho, no momento em
+# que você escala o KafkaNodePool. "mode" e "brokers" são preenchidos automaticamente
+# pelo operator nesse momento — não declare esses dois campos aqui, eles são ignorados.
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaRebalance
+metadata:
+  name: auto-add-brokers-template
+  labels:
+    strimzi.io/cluster: my-cluster
+  annotations:
+    strimzi.io/rebalance-template: "true"
+spec:
+  skipHardGoalCheck: false
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaRebalance
+metadata:
+  name: auto-remove-brokers-template
+  labels:
+    strimzi.io/cluster: my-cluster
+  annotations:
+    strimzi.io/rebalance-template: "true"
+spec:
+  skipHardGoalCheck: false

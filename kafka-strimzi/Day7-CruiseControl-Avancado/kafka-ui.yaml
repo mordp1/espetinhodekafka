@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-ui
+  namespace: kafka
+  labels:
+    app: kafka-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-ui
+  template:
+    metadata:
+      labels:
+        app: kafka-ui
+    spec:
+      containers:
+        - name: kafka-ui
+          image: ghcr.io/kafbat/kafka-ui:latest
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: KAFKA_CLUSTERS_0_NAME
+              value: my-cluster
+            - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
+              value: "my-cluster-kafka-bootstrap:9092"
+            # Listener "plain" do Day7 é sem TLS e sem autenticação (ver kafka-cluster.yaml),
+            # então não há SASL/SSL para configurar aqui — diferente do exemplo em
+            # Examples/kafka-ui.yaml, que usa SCRAM-SHA-512 + TLS.
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-ui
+  namespace: kafka
+  labels:
+    app: kafka-ui
+spec:
+  selector:
+    app: kafka-ui
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080

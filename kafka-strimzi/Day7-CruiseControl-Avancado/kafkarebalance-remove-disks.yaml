@@ -1,0 +1,18 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaRebalance
+metadata:
+  name: remove-disk-rebalance
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  mode: remove-disks
+  # Esvazia o volume id=1 do broker 0 (movendo as maiores réplicas primeiro para o
+  # volume id=0 e para os discos dos outros brokers), como passo prévio e seguro para
+  # remover fisicamente aquele disco depois. brokerId aqui precisa ser um ID de BROKER
+  # de verdade — neste lab o node pool "controller" fica com os IDs mais altos (3,4,5) e
+  # "broker" com os mais baixos (0,1,2); usar um ID de controller aqui falha com
+  # "IllegalArgumentException: Some/all brokers specified don't exist" (reproduzido neste
+  # lab). Ajuste o brokerId conforme o NODEIDS real do seu node pool (ver README seção 6).
+  moveReplicasOffVolumes:
+    - brokerId: 0
+      volumeIds: [1]

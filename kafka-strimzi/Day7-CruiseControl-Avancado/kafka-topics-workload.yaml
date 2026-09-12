@@ -1,0 +1,106 @@
+# Carga de trabalho multi-tópico para simular um domínio real (e-commerce) e gerar
+# desbalanceamento heterogêneo entre brokers: throughput, retenção, tamanho de mensagem
+# e replication factor variam de propósito entre os tópicos. Ver seção 8 do README para
+# o racional de cada tópico e os comandos de carga.
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: orders.created
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  # Tópico compactado: cada chave é um order-id, valor é o estado mais recente do pedido.
+  # Disco não cresce linearmente com o throughput — o log cleaner encolhe segmentos
+  # antigos. Bom contraste com os tópicos "append-only" abaixo na hora de interpretar
+  # o que o Cruise Control está de fato balanceando (bytes no disco AGORA, não taxa de
+  # ingestão histórica).
+  partitions: 6
+  replicas: 3
+  config:
+    cleanup.policy: compact
+    min.cleanable.dirty.ratio: "0.5"
+    segment.bytes: 268435456
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: payments.processed
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  # min.insync.replicas mais estrito que o default do cluster (2): tópico financeiro,
+  # volume baixo de propósito. Serve pra depois mostrarmos, no Day 7, como excludedTopics
+  # protege um tópico crítico de ser tocado por um rebalance disparado às pressas.
+  partitions: 6
+  replicas: 3
+  config:
+    min.insync.replicas: 3
+    retention.ms: 604800000
+    segment.bytes: 268435456
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: clickstream.raw
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  # O tópico "quente" do lab de propósito: mais partições (24) e maior throughput que
+  # qualquer outro — é ele que vai dominar disco/rede em alguns brokers e dar ao Cruise
+  # Control algo de verdade pra corrigir via DiskUsageDistributionGoal /
+  # NetworkInboundUsageDistributionGoal. Retenção curta (2 dias) porque clickstream cru
+  # normalmente é consumido e agregado rápido por um stream processor.
+  partitions: 24
+  replicas: 3
+  config:
+    retention.ms: 172800000
+    segment.bytes: 1073741824
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: inventory.updates
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  # RF 2 de propósito (vs RF 3 nos demais) — mostra que o Cruise Control lida bem com
+  # replication factor heterogêneo entre tópicos no mesmo cluster.
+  partitions: 8
+  replicas: 2
+  config:
+    retention.ms: 259200000
+    segment.bytes: 268435456
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: audit.logs
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  # Poucas partições e throughput baixo, mas retenção de 30 dias com mensagens grandes:
+  # o disco cresce por RETENÇÃO, não por taxa de ingestão. Contraste direto com
+  # clickstream.raw (throughput alto, retenção curta) — dois jeitos diferentes de um
+  # tópico virar "pesado" em disco, e o Cruise Control só enxerga o resultado final
+  # (bytes no disco agora), não a causa.
+  partitions: 4
+  replicas: 3
+  config:
+    retention.ms: 2592000000
+    segment.bytes: 268435456
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: notifications.push
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  # Tópico praticamente ocioso de propósito — baseline "frio" pra contrastar com
+  # clickstream.raw na hora de olhar o resultado da proposta de otimização.
+  partitions: 6
+  replicas: 3
+  config:
+    retention.ms: 259200000
+    segment.bytes: 268435456

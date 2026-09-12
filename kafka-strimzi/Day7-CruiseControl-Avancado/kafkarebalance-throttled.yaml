@@ -1,0 +1,29 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaRebalance
+metadata:
+  name: throttled-rebalance
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  mode: full
+  # Valores explícitos e SAUDÁVEIS de concorrência — contraste direto com o problema real
+  # relatado na comunidade Strimzi (discussion #7167): setar esses campos como 0 achando
+  # que "0 = sem limite" na verdade travou um rebalance de 82MB por mais de uma hora.
+  # 0 significa "quase nenhum movimento concorrente permitido", não "ilimitado". Se você
+  # não sabe que valor usar, é mais seguro OMITIR esses campos e deixar o Cruise Control
+  # usar os defaults (concurrentPartitionMovementsPerBroker=5,
+  # concurrentIntraBrokerPartitionMovements=2, concurrentLeaderMovements=1000) do que
+  # arriscar um valor baixo demais.
+  concurrentPartitionMovementsPerBroker: 3
+  concurrentIntraBrokerPartitionMovements: 1
+  concurrentLeaderMovements: 200
+  # 10MiB/s de teto pra banda usada movendo réplicas — protege o tráfego de produção
+  # (produtores/consumidores) de competir com o próprio rebalance pela rede. Sem isto,
+  # replicationThrottle não tem limite superior.
+  replicationThrottle: 10485760
+  # replicaMovementStrategies NÃO está aqui de propósito: testando ao vivo, incluir esse
+  # campo (mesmo com nomes de classe corretos e válidos no Cruise Control) faz a API
+  # rejeitar QUALQUER requisição de rebalance com "400 Bad Request" / "Failed to parse
+  # parameters" — reproduzido de forma determinística neste lab, isolado removendo campo
+  # por campo até sobrar só esse. Sem ele, o resto do throttling funciona normalmente.
+  # Ver seção 15 e seção 19 (Problemas Conhecidos) para detalhe.
