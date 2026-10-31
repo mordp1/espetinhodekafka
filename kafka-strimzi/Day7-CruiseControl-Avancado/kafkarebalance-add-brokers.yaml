@@ -6,8 +6,8 @@ metadata:
     strimzi.io/cluster: my-cluster
 spec:
   mode: add-brokers
-  # ID do broker novo após o "kubectl scale kafkanodepool broker --replicas=4".
-  # Confirme o valor real com "kubectl get kafkanodepool broker -n kafka" antes de aplicar —
-  # 6 é o esperado seguindo a numeração sequencial observada nos Days anteriores.
+  # ID of the new broker after "kubectl scale kafkanodepool broker --replicas=4".
+  # Confirm the real value with "kubectl get kafkanodepool broker -n kafka" before applying —
+  # 6 is expected following the sequential numbering observed in the previous Days.
   brokers:
     - 6

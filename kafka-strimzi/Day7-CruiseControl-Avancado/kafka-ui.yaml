@@ -27,9 +27,9 @@ spec:
               value: my-cluster
             - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
               value: "my-cluster-kafka-bootstrap:9092"
-            # Listener "plain" do Day7 é sem TLS e sem autenticação (ver kafka-cluster.yaml),
-            # então não há SASL/SSL para configurar aqui — diferente do exemplo em
-            # Examples/kafka-ui.yaml, que usa SCRAM-SHA-512 + TLS.
+            # Day7's "plain" listener has no TLS and no authentication (see kafka-cluster.yaml),
+            # so there's no SASL/SSL to configure here — unlike the example in
+            # Examples/kafka-ui.yaml, which uses SCRAM-SHA-512 + TLS.
           readinessProbe:
             httpGet:
               path: /actuator/health

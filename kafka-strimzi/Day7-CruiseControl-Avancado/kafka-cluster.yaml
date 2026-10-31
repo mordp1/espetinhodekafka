@@ -26,42 +26,42 @@ spec:
     userOperator: {}
   cruiseControl:
     config:
-      # Os 5 tipos de anomalia do Anomaly Detector — ver seção 16. Neste Day habilitamos
-      # broker failure (igual ao básico do Day 6) E goal violation E disk failure, pra
-      # termos self-healing de verdade pra demonstrar. metric.anomaly e topic.anomaly
-      # ficam desligados de propósito (ver ressalvas na seção 16).
+      # The 5 anomaly types of the Anomaly Detector — see section 16. In this Day we enable
+      # broker failure (same as the Day 6 basics) AND goal violation AND disk failure, so we
+      # have real self-healing to demonstrate. metric.anomaly and topic.anomaly
+      # are left disabled on purpose (see the caveats in section 16).
       self.healing.broker.failure.enabled: "true"
       self.healing.goal.violation.enabled: "true"
       self.healing.disk.failure.enabled: "true"
       self.healing.metric.anomaly.enabled: "false"
       self.healing.topic.anomaly.enabled: "false"
-    # brokerCapacity: sem isso, o Cruise Control assume 1 CORE de CPU por broker (issue
-    # strimzi-kafka-operator#5951) e os defaults de rede do upstream (10000KiB/s = ~10MB/s
-    # por broker) — irrealista mesmo pra um kind local, e baixo o bastante pra derrubar
-    # NetworkInboundCapacityGoal com o burst de carga da seção 7 (reproduzido e documentado
-    # na seção 12; mesma categoria de bug do "1 core" de CPU, só que pra rede).
+    # brokerCapacity: without this, Cruise Control assumes 1 CPU CORE per broker (issue
+    # strimzi-kafka-operator#5951) and upstream's network defaults (10000KiB/s = ~10MB/s
+    # per broker) — unrealistic even for a local kind cluster, and low enough to break
+    # NetworkInboundCapacityGoal with the load burst from section 7 (reproduced and documented
+    # in section 12; the same category of bug as the "1 core" CPU one, just for network).
     brokerCapacity:
       cpu: "2"
       inboundNetwork: 200000KiB/s
       outboundNetwork: 200000KiB/s
-      # Overrides por broker: útil quando o hardware é heterogêneo (ex.: um node pool
-      # rodando em instâncias maiores que as outras). Em kind os 3 workers são
-      # fisicamente idênticos — isso aqui é ilustrativo da SINTAXE, não uma correção real
-      # de assimetria neste lab local. IMPORTANTE: o ID aqui precisa ser um broker de
-      # verdade — neste lab o node pool "controller" fica com os IDs mais altos (3,4,5) e
-      # "broker" com os mais baixos (0,1,2); usar um ID de controller (ex.: 3) aqui não dá
-      # erro na hora do apply, mas o override simplesmente não se aplica a nenhum broker
-      # real (reproduzido neste lab). Confira os NODEIDS reais do node pool broker antes
-      # de assumir qual ID usar (seção 6).
+      # Per-broker overrides: useful when the hardware is heterogeneous (e.g., a node pool
+      # running on bigger instances than the others). In kind the 3 workers are
+      # physically identical — this here illustrates the SYNTAX, not a real fix
+      # for asymmetry in this local lab. IMPORTANT: the ID here needs to be a real
+      # broker — in this lab the "controller" node pool gets the higher IDs (3,4,5) and
+      # "broker" gets the lower ones (0,1,2); using a controller ID (e.g., 3) here doesn't
+      # error out on apply, but the override simply doesn't apply to any real
+      # broker (reproduced in this lab). Check the real NODEIDS of the broker node pool
+      # before assuming which ID to use (section 6).
       overrides:
         - brokers: [0]
           cpu: "4"
           inboundNetwork: 400000KiB/s
           outboundNetwork: 400000KiB/s
-    # autoRebalance NÃO está habilitado aqui de propósito — reproduzimos ao vivo o que
-    # acontece se ele já estiver ligado no deploy inicial: no primeiro "kubectl scale
-    # kafkanodepool broker --replicas=4", o operator dispara o add-brokers sozinho ANTES
-    # que você consiga aplicar o kafkarebalance-add-brokers.yaml manual da seção 9 — a
-    # demonstração manual de add-brokers/remove-brokers nunca chega a rodar do jeito que
-    # está documentado. autoRebalance é habilitado só na seção 17, via "kubectl edit"/
-    # patch, depois que as seções 8-16 já rodaram o fluxo manual.
+    # autoRebalance is NOT enabled here on purpose — we reproduce live what
+    # happens if it's already turned on at the initial deploy: on the first "kubectl scale
+    # kafkanodepool broker --replicas=4", the operator triggers add-brokers on its own BEFORE
+    # you can apply the manual kafkarebalance-add-brokers.yaml from section 9 — the
+    # manual add-brokers/remove-brokers demonstration never gets to run the way it's
+    # documented. autoRebalance is enabled only in section 17, via "kubectl edit"/
+    # patch, after sections 8-16 have already run the manual flow.

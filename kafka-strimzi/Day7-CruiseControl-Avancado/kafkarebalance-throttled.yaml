@@ -6,24 +6,24 @@ metadata:
     strimzi.io/cluster: my-cluster
 spec:
   mode: full
-  # Valores explícitos e SAUDÁVEIS de concorrência — contraste direto com o problema real
-  # relatado na comunidade Strimzi (discussion #7167): setar esses campos como 0 achando
-  # que "0 = sem limite" na verdade travou um rebalance de 82MB por mais de uma hora.
-  # 0 significa "quase nenhum movimento concorrente permitido", não "ilimitado". Se você
-  # não sabe que valor usar, é mais seguro OMITIR esses campos e deixar o Cruise Control
-  # usar os defaults (concurrentPartitionMovementsPerBroker=5,
-  # concurrentIntraBrokerPartitionMovements=2, concurrentLeaderMovements=1000) do que
-  # arriscar um valor baixo demais.
+  # Explicit and HEALTHY concurrency values — direct contrast with the real problem
+  # reported in the Strimzi community (discussion #7167): setting these fields to 0 thinking
+  # "0 = no limit" actually stalled an 82MB rebalance for over an hour.
+  # 0 means "almost no concurrent movement allowed", not "unlimited". If you
+  # don't know what value to use, it's safer to OMIT these fields and let Cruise Control
+  # use the defaults (concurrentPartitionMovementsPerBroker=5,
+  # concurrentIntraBrokerPartitionMovements=2, concurrentLeaderMovements=1000) than to
+  # risk a value that's too low.
   concurrentPartitionMovementsPerBroker: 3
   concurrentIntraBrokerPartitionMovements: 1
   concurrentLeaderMovements: 200
-  # 10MiB/s de teto pra banda usada movendo réplicas — protege o tráfego de produção
-  # (produtores/consumidores) de competir com o próprio rebalance pela rede. Sem isto,
-  # replicationThrottle não tem limite superior.
+  # 10MiB/s cap on bandwidth used moving replicas — protects production traffic
+  # (producers/consumers) from competing with the rebalance itself for the network. Without
+  # this, replicationThrottle has no upper limit.
   replicationThrottle: 10485760
-  # replicaMovementStrategies NÃO está aqui de propósito: testando ao vivo, incluir esse
-  # campo (mesmo com nomes de classe corretos e válidos no Cruise Control) faz a API
-  # rejeitar QUALQUER requisição de rebalance com "400 Bad Request" / "Failed to parse
-  # parameters" — reproduzido de forma determinística neste lab, isolado removendo campo
-  # por campo até sobrar só esse. Sem ele, o resto do throttling funciona normalmente.
-  # Ver seção 15 e seção 19 (Problemas Conhecidos) para detalhe.
+  # replicaMovementStrategies is NOT here on purpose: testing live, including this
+  # field (even with correct, valid class names in Cruise Control) makes the API
+  # reject ANY rebalance request with "400 Bad Request" / "Failed to parse
+  # parameters" — reproduced deterministically in this lab, isolated by removing fields
+  # one by one until only this one was left. Without it, the rest of the throttling works normally.
+  # See section 15 and section 19 (Known Issues) for details.

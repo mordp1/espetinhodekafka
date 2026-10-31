@@ -6,8 +6,8 @@ metadata:
     strimzi.io/cluster: my-cluster
 spec:
   mode: remove-brokers
-  # Mesmo broker que entrou via add-brokers-rebalance — o Cruise Control move todas as
-  # réplicas dele para os demais brokers ANTES de você reduzir o replicas do node pool,
-  # evitando o erro de scale-down manual que vimos no Day 3.
+  # Same broker that joined via add-brokers-rebalance — Cruise Control moves all of its
+  # replicas to the remaining brokers BEFORE you reduce the node pool's replicas,
+  # avoiding the manual scale-down error we saw in Day 3.
   brokers:
     - 6

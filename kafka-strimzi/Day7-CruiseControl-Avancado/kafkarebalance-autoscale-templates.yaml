@@ -1,9 +1,9 @@
-# Templates referenciados por spec.cruiseControl.autoRebalance no kafka-cluster.yaml
-# (README seção 17). Não são pedidos de rebalance — a anotação
-# strimzi.io/rebalance-template: "true" marca cada um como configuração-base que o
-# Cluster Operator usa para MONTAR um KafkaRebalance de verdade sozinho, no momento em
-# que você escala o KafkaNodePool. "mode" e "brokers" são preenchidos automaticamente
-# pelo operator nesse momento — não declare esses dois campos aqui, eles são ignorados.
+# Templates referenced by spec.cruiseControl.autoRebalance in kafka-cluster.yaml
+# (README section 17). These are not rebalance requests — the
+# strimzi.io/rebalance-template: "true" annotation marks each one as base configuration that
+# the Cluster Operator uses to BUILD a real KafkaRebalance on its own, at the moment
+# you scale the KafkaNodePool. "mode" and "brokers" are filled in automatically
+# by the operator at that point — don't declare these two fields here, they are ignored.
 ---
 apiVersion: kafka.strimzi.io/v1
 kind: KafkaRebalance

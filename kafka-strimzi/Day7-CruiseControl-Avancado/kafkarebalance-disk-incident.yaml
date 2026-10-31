@@ -6,21 +6,21 @@ metadata:
     strimzi.io/cluster: my-cluster
 spec:
   mode: full
-  # Cenário: disco quase cheio num broker específico, agora, produção. Não queremos
-  # esperar (nem pagar o custo de rede de) um rebalance completo com todos os goals —
-  # queremos SÓ resolver disco, o mais rápido possível.
+  # Scenario: a disk almost full on a specific broker, right now, in production. We don't
+  # want to wait for (or pay the network cost of) a full rebalance with all goals —
+  # we want to fix ONLY disk, as fast as possible.
   goals:
     - DiskCapacityGoal
     - DiskUsageDistributionGoal
-  # Sem isto, a proposta falha: o hard.goals do cluster (RackAwareGoal,
-  # ReplicaCapacityGoal, os dois de rede, CpuCapacityGoal, etc.) precisa aparecer na
-  # lista de goals executados — não só o goal de disco. skipHardGoalCheck=true é o que
-  # permite rodar só os dois goals acima. Trade-off explícito: aceitamos não verificar
-  # rack/rede/CPU/etc. NESTA execução para resolver a emergência de disco agora; o
-  # follow-up é um kafkarebalance-full.yaml completo depois que o incidente passar.
-  # Ver README seção 13 para o racional completo.
+  # Without this, the proposal fails: the cluster's hard.goals (RackAwareGoal,
+  # ReplicaCapacityGoal, the two network ones, CpuCapacityGoal, etc.) must appear in
+  # the list of executed goals — not just the disk goal. skipHardGoalCheck=true is what
+  # allows running only the two goals above. Explicit trade-off: we accept not checking
+  # rack/network/CPU/etc. in THIS run to fix the disk emergency now; the
+  # follow-up is a full kafkarebalance-full.yaml once the incident is over.
+  # See README section 13 for the full rationale.
   skipHardGoalCheck: true
-  # Protege o tópico financeiro de ser tocado por um rebalance de emergência —
-  # nenhuma réplica de payments.* deve se mover só porque outro broker está com disco
-  # cheio.
+  # Protects the financial topic from being touched by an emergency rebalance —
+  # no payments.* replica should move just because another broker's disk is
+  # full.
   excludedTopics: "payments\\..*"

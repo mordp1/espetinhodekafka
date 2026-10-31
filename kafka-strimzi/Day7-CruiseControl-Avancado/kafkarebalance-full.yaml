@@ -5,10 +5,10 @@ metadata:
   labels:
     strimzi.io/cluster: my-cluster
 spec:
-  # mode: full é o default (poderia omitir) — deixado explícito para clareza no vídeo.
-  # Lista explícita de um subconjunto dos goals default do Cruise Control (ver referências
-  # para a lista completa e a ordem hard/soft). Omitir spec.goals usa o
-  # cruiseControl.config.default.goals do operator.
+  # mode: full is the default (could be omitted) — left explicit for clarity in the video.
+  # Explicit list of a subset of Cruise Control's default goals (see references
+  # for the full list and the hard/soft order). Omitting spec.goals uses the
+  # operator's cruiseControl.config.default.goals.
   goals:
     - RackAwareGoal
     - ReplicaCapacityGoal

@@ -6,11 +6,11 @@ metadata:
     strimzi.io/cluster: my-cluster
 spec:
   mode: full
-  # rebalanceDisk=true liga o IntraBrokerDiskCapacityGoal / IntraBrokerDiskUsageDistribution
-  # goal — move réplicas ENTRE OS DOIS DISCOS DO MESMO BROKER (volumes id 0 e 1 do
-  # kafka-nodepool-broker.yaml), não entre brokers. Só funciona em storage JBOD com mais
-  # de um volume; até pouco tempo atrás havia um bug (strimzi-kafka-operator#10280) que
-  # rejeitava isso em clusters usando KafkaNodePool — corrigido, mas vale checar a
-  # versão do operator se você ver "cluster does not have JBOD storage config" com JBOD
-  # configurado.
+  # rebalanceDisk=true turns on the IntraBrokerDiskCapacityGoal / IntraBrokerDiskUsageDistribution
+  # goal — it moves replicas BETWEEN THE SAME BROKER'S TWO DISKS (volumes id 0 and 1 of
+  # kafka-nodepool-broker.yaml), not between brokers. Only works on JBOD storage with more
+  # than one volume; until recently there was a bug (strimzi-kafka-operator#10280) that
+  # rejected this on clusters using KafkaNodePool — fixed now, but it's worth checking the
+  # operator version if you see "cluster does not have JBOD storage config" with JBOD
+  # configured.
   rebalanceDisk: true

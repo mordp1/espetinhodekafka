@@ -1,7 +1,7 @@
-# Carga de trabalho multi-tópico para simular um domínio real (e-commerce) e gerar
-# desbalanceamento heterogêneo entre brokers: throughput, retenção, tamanho de mensagem
-# e replication factor variam de propósito entre os tópicos. Ver seção 8 do README para
-# o racional de cada tópico e os comandos de carga.
+# Multi-topic workload to simulate a real domain (e-commerce) and generate
+# heterogeneous imbalance across brokers: throughput, retention, message size,
+# and replication factor vary on purpose between topics. See section 8 of the README for
+# the rationale behind each topic and the load commands.
 ---
 apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
@@ -10,11 +10,11 @@ metadata:
   labels:
     strimzi.io/cluster: my-cluster
 spec:
-  # Tópico compactado: cada chave é um order-id, valor é o estado mais recente do pedido.
-  # Disco não cresce linearmente com o throughput — o log cleaner encolhe segmentos
-  # antigos. Bom contraste com os tópicos "append-only" abaixo na hora de interpretar
-  # o que o Cruise Control está de fato balanceando (bytes no disco AGORA, não taxa de
-  # ingestão histórica).
+  # Compacted topic: each key is an order-id, value is the order's most recent state.
+  # Disk doesn't grow linearly with throughput — the log cleaner shrinks old
+  # segments. Good contrast with the "append-only" topics below when interpreting
+  # what Cruise Control is actually balancing (bytes on disk NOW, not historical
+  # ingestion rate).
   partitions: 6
   replicas: 3
   config:
@@ -29,9 +29,9 @@ metadata:
   labels:
     strimzi.io/cluster: my-cluster
 spec:
-  # min.insync.replicas mais estrito que o default do cluster (2): tópico financeiro,
-  # volume baixo de propósito. Serve pra depois mostrarmos, no Day 7, como excludedTopics
-  # protege um tópico crítico de ser tocado por um rebalance disparado às pressas.
+  # min.insync.replicas stricter than the cluster default (2): financial topic,
+  # low volume on purpose. Used later, in Day 7, to show how excludedTopics
+  # protects a critical topic from being touched by a hastily triggered rebalance.
   partitions: 6
   replicas: 3
   config:
@@ -46,11 +46,11 @@ metadata:
   labels:
     strimzi.io/cluster: my-cluster
 spec:
-  # O tópico "quente" do lab de propósito: mais partições (24) e maior throughput que
-  # qualquer outro — é ele que vai dominar disco/rede em alguns brokers e dar ao Cruise
-  # Control algo de verdade pra corrigir via DiskUsageDistributionGoal /
-  # NetworkInboundUsageDistributionGoal. Retenção curta (2 dias) porque clickstream cru
-  # normalmente é consumido e agregado rápido por um stream processor.
+  # The lab's "hot" topic on purpose: more partitions (24) and higher throughput than
+  # any other — it's the one that will dominate disk/network on some brokers and give
+  # Cruise Control something real to fix via DiskUsageDistributionGoal /
+  # NetworkInboundUsageDistributionGoal. Short retention (2 days) because raw clickstream
+  # is normally consumed and aggregated quickly by a stream processor.
   partitions: 24
   replicas: 3
   config:
@@ -64,8 +64,8 @@ metadata:
   labels:
     strimzi.io/cluster: my-cluster
 spec:
-  # RF 2 de propósito (vs RF 3 nos demais) — mostra que o Cruise Control lida bem com
-  # replication factor heterogêneo entre tópicos no mesmo cluster.
+  # RF 2 on purpose (vs RF 3 elsewhere) — shows that Cruise Control handles
+  # heterogeneous replication factor across topics in the same cluster well.
   partitions: 8
   replicas: 2
   config:
@@ -79,11 +79,11 @@ metadata:
   labels:
     strimzi.io/cluster: my-cluster
 spec:
-  # Poucas partições e throughput baixo, mas retenção de 30 dias com mensagens grandes:
-  # o disco cresce por RETENÇÃO, não por taxa de ingestão. Contraste direto com
-  # clickstream.raw (throughput alto, retenção curta) — dois jeitos diferentes de um
-  # tópico virar "pesado" em disco, e o Cruise Control só enxerga o resultado final
-  # (bytes no disco agora), não a causa.
+  # Few partitions and low throughput, but 30-day retention with large messages:
+  # disk grows from RETENTION, not from ingestion rate. Direct contrast with
+  # clickstream.raw (high throughput, short retention) — two different ways for a
+  # topic to become "heavy" on disk, and Cruise Control only sees the end result
+  # (bytes on disk now), not the cause.
   partitions: 4
   replicas: 3
   config:
@@ -97,8 +97,8 @@ metadata:
   labels:
     strimzi.io/cluster: my-cluster
 spec:
-  # Tópico praticamente ocioso de propósito — baseline "frio" pra contrastar com
-  # clickstream.raw na hora de olhar o resultado da proposta de otimização.
+  # Practically idle topic on purpose — a "cold" baseline to contrast with
+  # clickstream.raw when looking at the optimization proposal's result.
   partitions: 6
   replicas: 3
   config:
