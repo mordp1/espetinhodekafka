@@ -1,0 +1,38 @@
+{{- range $uname, $u := .Values.users }}
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata:
+  name: {{ $.Values.app }}-{{ $uname }}
+  labels:
+    strimzi.io/cluster: {{ $.Values.kafkaCluster }}
+    {{- include "kafka-tenant.labels" $ | nindent 4 }}
+spec:
+  authentication:
+    type: {{ $u.authentication | default "scram-sha-512" }}
+  {{- if $u.access }}
+  authorization:
+    type: simple
+    acls:
+      {{- range $u.access }}
+      - resource:
+          type: topic
+          name: {{ include "kafka-tenant.topicName" (dict "ctx" $ "ref" .topic) }}
+          patternType: literal
+        operations:
+          {{- toYaml .operations | nindent 10 }}
+      {{- if .group }}
+      - resource:
+          type: group
+          name: {{ $.Values.app }}-{{ .group }}
+          patternType: literal
+        operations:
+          - Read
+      {{- end }}
+      {{- end }}
+  {{- end }}
+  {{- with $u.quotas }}
+  quotas:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

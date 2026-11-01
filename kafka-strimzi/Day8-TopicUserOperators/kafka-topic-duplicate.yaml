@@ -1,0 +1,12 @@
+# Second KafkaTopic pointing at the SAME Kafka topic as orders.events -> ResourceConflict.
+# The oldest resource wins; this one stays Ready=False and changes nothing in Kafka.
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: orders-events-duplicate
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  topicName: orders.events
+  partitions: 12
+  replicas: 3

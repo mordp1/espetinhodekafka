@@ -1,0 +1,11 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata:
+  name: admin
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  # "admin" is listed in Kafka.spec.kafka.authorization.superUsers, so it needs no ACLs.
+  # The User Operator creates the SCRAM credential in Kafka and the Secret "admin" with the password.
+  authentication:
+    type: scram-sha-512

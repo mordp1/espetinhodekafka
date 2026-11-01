@@ -1,0 +1,9 @@
+enabled: true                          # <- the region switch. Only leaves with enabled: true become an Application.
+# Cluster-local overrides (EU): more partitions + an EU-only topic (data-residency audit trail).
+topics:
+  events:
+    partitions: 12
+  gdpr-audit:
+    partitions: 3
+    config:
+      retention.ms: 7776000000         # 90d

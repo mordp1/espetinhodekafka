@@ -1,0 +1,29 @@
+{{- range $name, $t := .Values.topics }}
+{{- $protect := $.Values.protectTopics }}
+{{- if hasKey $t "protect" }}{{ $protect = $t.protect }}{{ end }}
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: {{ include "kafka-tenant.topicName" (dict "ctx" $ "ref" $name) }}
+  labels:
+    strimzi.io/cluster: {{ $.Values.kafkaCluster }}
+    {{- include "kafka-tenant.labels" $ | nindent 4 }}
+  {{- if $protect }}
+  annotations:
+    # Two-step deletion: removing the topic from Git does NOT prune it, and deleting the Application does
+    # not cascade to it. To really delete: PR 1 sets `protect: false`, PR 2 removes the topic.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  {{- end }}
+spec:
+  {{- with $t.partitions }}
+  partitions: {{ . }}
+  {{- end }}
+  {{- with $t.replicas }}
+  replicas: {{ . }}
+  {{- end }}
+  {{- with $t.config }}
+  config:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

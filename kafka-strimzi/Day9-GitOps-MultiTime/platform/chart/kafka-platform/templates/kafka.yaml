@@ -1,0 +1,41 @@
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: {{ .Values.clusterName }}
+  labels:
+    {{- include "kafka-platform.labels" . | nindent 4 }}
+spec:
+  kafka:
+    version: {{ .Values.kafka.version }}
+    metadataVersion: {{ .Values.kafka.metadataVersion }}
+    listeners:
+      # LAB ONLY: SASL_PLAINTEXT. In production use tls: true (Day 4) and, for clients outside the
+      # cluster, a loadbalancer/ingress listener.
+      - name: scram
+        port: 9092
+        type: internal
+        tls: false
+        authentication:
+          type: scram-sha-512
+    authorization:
+      type: simple
+      superUsers:
+        {{- toYaml .Values.superUsers | nindent 8 }}
+    config:
+      # The Topic Operator must be the ONLY thing creating topics (Day 8, section 6.8).
+      auto.create.topics.enable: false
+      offsets.topic.replication.factor: {{ include "kafka-platform.rf" . }}
+      transaction.state.log.replication.factor: {{ include "kafka-platform.rf" . }}
+      transaction.state.log.min.isr: {{ include "kafka-platform.isr" . }}
+      default.replication.factor: {{ include "kafka-platform.rf" . }}
+      min.insync.replicas: {{ include "kafka-platform.isr" . }}
+      {{- with .Values.kafka.config }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+  # Day 8: Entity Operator = Topic Operator + User Operator, watching THIS namespace only.
+  # Every regional Kafka has its own pair -> one namespace per Kafka (never two Kafkas in one namespace).
+  entityOperator:
+    topicOperator:
+      reconciliationIntervalMs: {{ .Values.entityOperator.reconciliationIntervalMs }}
+    userOperator:
+      reconciliationIntervalMs: {{ .Values.entityOperator.reconciliationIntervalMs }}

@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["app", "env", "cluster"],
+  "additionalProperties": false,
+  "properties": {
+    "app":     { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "env":     { "type": "string", "enum": ["dev", "stg", "prod"] },
+    "cluster": { "type": "string", "pattern": "^[a-z][a-z0-9]*$" },
+    "enabled": { "type": "boolean" },
+    "kafkaCluster": { "type": "string" },
+    "topicPrefix":  { "type": "string", "pattern": "^([a-z0-9-]+\\.)?$" },
+    "protectTopics": { "type": "boolean" },
+    "topics": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "partitions": { "type": "integer", "minimum": 1, "maximum": 100 },
+          "replicas":   { "type": "integer", "minimum": 1, "maximum": 5 },
+          "protect":    { "type": "boolean" },
+          "config": {
+            "type": "object",
+            "description": "Policy as schema: teams may only tune this allow-list of topic configs.",
+            "propertyNames": { "enum": ["retention.ms", "retention.bytes", "cleanup.policy", "min.insync.replicas", "max.message.bytes", "segment.bytes", "segment.ms", "compression.type", "delete.retention.ms", "min.compaction.lag.ms"] }
+          }
+        }
+      }
+    },
+    "users": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "authentication": { "type": "string", "enum": ["scram-sha-512", "tls"] },
+          "access": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["topic", "operations"],
+              "additionalProperties": false,
+              "properties": {
+                "topic": { "type": "string", "description": "short name = own topic; <team>.<name> = ANOTHER team's topic (needs that team's grant)", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)?$" },
+                "operations": {
+                  "type": "array", "minItems": 1, "uniqueItems": true,
+                  "items": { "type": "string", "description": "No All/Alter/Create/Delete for tenants: topic lifecycle belongs to the Topic Operator.", "enum": ["Read", "Write", "Describe", "DescribeConfigs"] }
+                },
+                "group": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" }
+              }
+            }
+          },
+          "quotas": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "producerByteRate": { "type": "integer", "minimum": 1 },
+              "consumerByteRate": { "type": "integer", "minimum": 1 },
+              "requestPercentage": { "type": "integer", "minimum": 1, "maximum": 100 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+# The platform team's project: it may install CRDs/operators and Kafka resources. Tenants can NOT use it.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: kafka-platform
+  namespace: argocd
+spec:
+  description: Strimzi operator + one Kafka per region (owned by the platform team)
+  sourceRepos:
+    - http://git-server.git.svc/cgi-bin/git/platform.git
+    - https://strimzi.io/charts/
+  destinations:
+    - server: https://kubernetes.default.svc     # LAB. Production: one registered cluster per region (name: eu-prod, us-prod...)
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"

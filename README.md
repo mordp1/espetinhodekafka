@@ -102,8 +102,14 @@ para montar o laboratório localmente.
 | Day 1 | [Strimzi Operator - Kafka no Kubernetes](https://www.youtube.com/watch?v=Sw8seG0h3q8) |
 | Day 2 | Kafka Node Pools — KRaft, broker/controller separados e storage persistente |
 | Day 3 | Kafka Node Pools Avançado — node IDs, storage/scheduling por pool e quorum de controller |
+| Day 4 | Autenticação e Autorização — mTLS, SCRAM e ACLs multi-tenant |
+| Day 5 | KafkaAccessOperator — entregando credenciais às aplicações |
+| Day 6 | Cruise Control — introdução |
+| Day 7 | Cruise Control Avançado — rebalanceamento, goals, JBOD e automação |
+| Day 8 | Topic Operator e User Operator — tópicos e usuários como código, sincronização, modo standalone com Kafka fora do Kubernetes |
+| Day 9 | Bônus: GitOps multi-time — ArgoCD ApplicationSet, `APP/ENV/CLUSTER`, CODEOWNERS e PR automático de acesso entre times |
 
-📁 [kafka-strimzi/Day1-Introducao/](kafka-strimzi/Day1-Introducao/) · [kafka-strimzi/Day2-NodePools/](kafka-strimzi/Day2-NodePools/) · [kafka-strimzi/Day3-NodePools-Avancado/](kafka-strimzi/Day3-NodePools-Avancado/)
+📁 [kafka-strimzi/Day1-Introducao/](kafka-strimzi/Day1-Introducao/) · [kafka-strimzi/Day2-NodePools/](kafka-strimzi/Day2-NodePools/) · [kafka-strimzi/Day3-NodePools-Avancado/](kafka-strimzi/Day3-NodePools-Avancado/) · [kafka-strimzi/Day4-Autenticacao-Autorizacao/](kafka-strimzi/Day4-Autenticacao-Autorizacao/) · [kafka-strimzi/Day5-KafkaAccessOperator/](kafka-strimzi/Day5-KafkaAccessOperator/) · [kafka-strimzi/Day6-CruiseControl/](kafka-strimzi/Day6-CruiseControl/) · [kafka-strimzi/Day7-CruiseControl-Avancado/](kafka-strimzi/Day7-CruiseControl-Avancado/) · [kafka-strimzi/Day8-TopicUserOperators/](kafka-strimzi/Day8-TopicUserOperators/) · [kafka-strimzi/Day9-GitOps-MultiTime/](kafka-strimzi/Day9-GitOps-MultiTime/)
 
 ---
 

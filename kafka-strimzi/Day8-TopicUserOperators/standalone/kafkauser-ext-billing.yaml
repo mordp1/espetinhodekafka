@@ -1,0 +1,19 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata:
+  name: billing-app
+  labels:
+    strimzi.io/cluster: external-kafka   # matches STRIMZI_LABELS of the standalone operator
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: payments.
+          patternType: prefix
+        operations:
+          - Write
+          - Describe

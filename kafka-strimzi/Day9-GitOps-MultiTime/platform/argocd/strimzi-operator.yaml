@@ -1,0 +1,27 @@
+# The Strimzi Cluster Operator, installed from the OFFICIAL Helm chart (no fork, no vendored copy).
+# One operator per Kubernetes cluster; it watches every namespace, so each regional Kafka lives in its
+# own namespace and gets its own Entity Operator (Topic + User Operator).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: strimzi-operator
+  namespace: argocd
+spec:
+  project: kafka-platform
+  source:
+    repoURL: https://strimzi.io/charts/
+    chart: strimzi-kafka-operator
+    targetRevision: 1.1.0                # pinned: upgrading Strimzi = a reviewed PR changing this line
+    helm:
+      valuesObject:
+        watchAnyNamespace: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: strimzi-operator
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true             # Strimzi CRDs are bigger than the 256KiB annotation limit of client-side apply

@@ -1,0 +1,2 @@
+enabled: false                         # there is no dev Kafka in this lab; flip to true once the platform team provides kafka-dev-eu
+protectTopics: false                   # dev topics may be deleted with a single PR

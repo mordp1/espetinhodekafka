@@ -1,0 +1,38 @@
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: my-cluster
+spec:
+  kafka:
+    version: 4.3.0
+    metadataVersion: 4.3-IV0
+    listeners:
+      # LAB ONLY: SASL_PLAINTEXT keeps the kubectl-exec commands short. In production use tls: true
+      # (see Day 4). Authentication is what matters here: the User Operator needs a real authorizer.
+      - name: scram
+        port: 9092
+        type: internal
+        tls: false
+        authentication:
+          type: scram-sha-512
+    authorization:
+      type: simple
+      superUsers:
+        - admin
+    config:
+      # The UTO docs RECOMMEND disabling auto-creation: otherwise an app can create the topic
+      # (with broker defaults) before the KafkaTopic is reconciled. See section 6.8 of the README.
+      auto.create.topics.enable: false
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      default.replication.factor: 3
+      min.insync.replicas: 2
+  # The "Entity Operator" is ONE Deployment with two containers: topic-operator + user-operator.
+  # Both enabled with {} = defaults. The 30s interval is a lab shortcut (default 120000 ms = 2 min)
+  # so you do not wait minutes to watch the periodic reconciliation revert out-of-band changes.
+  entityOperator:
+    topicOperator:
+      reconciliationIntervalMs: 30000
+    userOperator:
+      reconciliationIntervalMs: 30000

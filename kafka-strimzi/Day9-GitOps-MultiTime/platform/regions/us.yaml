@@ -1,0 +1,7 @@
+region: us
+kafka:
+  replicas: 1
+  storage:
+    size: 5Gi
+entityOperator:
+  reconciliationIntervalMs: 30000

@@ -1,0 +1,24 @@
+# TEAM ORDERS - declared ONCE, inherited by every env/cluster (apps/orders/<env>/<cluster>/).
+# Physical topic name = <site prefix><team>.<name>  ->  orders.events, orders.events-dlq ...
+topics:
+  events:
+    partitions: 6
+    config:
+      retention.ms: 604800000          # 7d
+  events-dlq:
+    partitions: 1
+    config:
+      retention.ms: 1209600000         # 14d
+
+users:
+  producer:                            # KafkaUser "orders-producer"
+    authentication: scram-sha-512
+    access:
+      - topic: events                  # no dot = my own topic
+        operations: [Write, Describe]
+  fulfillment-consumer:                # KafkaUser "orders-fulfillment-consumer"
+    authentication: scram-sha-512
+    access:
+      - topic: events
+        operations: [Read, Describe]
+        group: fulfillment             # consumer group "orders-fulfillment"

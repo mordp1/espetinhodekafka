@@ -1,0 +1,14 @@
+# Ownership == folder. A PR that touches /apps/<team>/ asks THAT team for review
+# (enable "Require review from Code Owners" in the branch protection of main).
+# Replace @acme-corp/... by your GitHub org/teams.
+
+# --- platform: chart, ArgoCD manifests, CI, this file ---
+/chart/                 @acme-corp/kafka-platform
+/argocd/                @acme-corp/kafka-platform
+/ci/                    @acme-corp/kafka-platform
+/.github/               @acme-corp/kafka-platform
+
+# --- tenants: one line per team. The folder name IS the team name IS the topic prefix ---
+/apps/orders/           @acme-corp/team-orders
+/apps/payments/         @acme-corp/team-payments
+/apps/inventory/        @acme-corp/team-inventory

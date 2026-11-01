@@ -1,0 +1,6 @@
+# Namespace of the "external" Kafka. One namespace == one Topic Operator + one User Operator
+# == one Kafka cluster. Never point two operators (of different clusters) at the same namespace.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-ops

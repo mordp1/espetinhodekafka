@@ -1,0 +1,65 @@
+# ONE ApplicationSet for every team, env and region.
+#
+# The Git "files" generator scans   apps/<app>/<env>/<cluster>/values.yaml   (exactly 3 levels deep) and yields one
+# parameter set per file. `selector` post-filters them: only leaves with `enabled: true` become an Application.
+#   * new team / env / region  -> add a folder with a values.yaml            (nothing to register anywhere)
+#   * switch a site off        -> `enabled: false`                           (the Application disappears, topics stay: see preserveResourcesOnDeletion)
+# apps/<app>/values.yaml (common) and apps/<app>/grants/*.yaml are NOT matched (wrong depth).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kafka-tenants
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: http://git-server.git.svc/cgi-bin/git/tenants.git
+        revision: main
+        requeueAfterSeconds: 30                  # LAB. Production: a webhook from Git + the default 3 min
+        files:
+          - path: "apps/*/*/*/values.yaml"
+      selector:
+        matchLabels:
+          enabled: "true"
+  template:
+    metadata:
+      name: 'kafka-{{ index .path.segments 1 }}-{{ index .path.segments 2 }}-{{ index .path.segments 3 }}'
+      labels:
+        tenant.kafka/team: '{{ index .path.segments 1 }}'
+        tenant.kafka/env: '{{ index .path.segments 2 }}'
+        tenant.kafka/cluster: '{{ index .path.segments 3 }}'
+    spec:
+      project: kafka-tenants
+      sources:
+        - repoURL: http://git-server.git.svc/cgi-bin/git/tenants.git
+          targetRevision: main
+          path: chart/kafka-tenant
+          helm:
+            ignoreMissingValueFiles: true        # the env layer is optional
+            valueFiles:                          # layering: common -> env -> cluster (maps deep-merge)
+              - '$values/apps/{{ index .path.segments 1 }}/values.yaml'
+              - '$values/apps/{{ index .path.segments 1 }}/{{ index .path.segments 2 }}/values.yaml'
+              - '$values/{{ .path.path }}/values.yaml'
+            parameters:                          # identity comes from the PATH, never from a file a team can edit
+              - { name: app,     value: '{{ index .path.segments 1 }}' }
+              - { name: env,     value: '{{ index .path.segments 2 }}' }
+              - { name: cluster, value: '{{ index .path.segments 3 }}' }
+        - repoURL: http://git-server.git.svc/cgi-bin/git/tenants.git
+          targetRevision: main
+          ref: values
+      destination:
+        server: https://kubernetes.default.svc   # production: name: '{{ index .path.segments 3 }}-{{ index .path.segments 2 }}'  (e.g. eu-prod)
+        namespace: 'kafka-{{ index .path.segments 2 }}-{{ index .path.segments 3 }}'
+      syncPolicy:
+        automated:
+          prune: true                            # removing a USER from Git revokes it. Topics are protected by their own Prune=false annotation.
+          selfHeal: true
+        syncOptions:
+          - PruneLast=true
+  syncPolicy:
+    # GUARDRAIL #2 - when a leaf stops matching (enabled: false, folder deleted) the generated Application is
+    # deleted, but WITHOUT cascading to the KafkaTopics/KafkaUsers it created. Turning a region off in Git is
+    # not "delete all topics of this team in this region".
+    preserveResourcesOnDeletion: true
