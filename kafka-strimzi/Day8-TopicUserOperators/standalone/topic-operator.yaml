@@ -1,0 +1,125 @@
+# Standalone Topic Operator — adapted from install/topic-operator/ of the Strimzi 1.1.0 release
+# (01-ServiceAccount, 02-Role, 03-RoleBinding, 05-Deployment merged in one file).
+# No Cluster Operator, no Kafka CR, no Entity Operator: just this Deployment + the KafkaTopic CRD.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: strimzi-topic-operator
+  labels:
+    app: strimzi
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: strimzi-topic-operator
+  labels:
+    app: strimzi
+rules:
+  - apiGroups: ["kafka.strimzi.io"]
+    resources: ["kafkatopics"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: ["kafka.strimzi.io"]
+    resources: ["kafkatopics/status"]
+    verbs: ["get", "patch", "update"]
+  - apiGroups: ["kafka.strimzi.io"]
+    resources: ["kafkatopics/finalizers"]
+    verbs: ["update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: strimzi-topic-operator
+  labels:
+    app: strimzi
+subjects:
+  - kind: ServiceAccount
+    name: strimzi-topic-operator
+roleRef:
+  kind: Role
+  name: strimzi-topic-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: strimzi-topic-operator
+  labels:
+    app: strimzi
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      name: strimzi-topic-operator
+  template:
+    metadata:
+      labels:
+        name: strimzi-topic-operator
+    spec:
+      serviceAccountName: strimzi-topic-operator
+      volumes:
+        - name: strimzi-tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 5Mi
+      containers:
+        - name: strimzi-topic-operator
+          image: quay.io/strimzi/operator:1.1.0
+          args:
+            - /opt/strimzi/bin/topic_operator_run.sh
+          volumeMounts:
+            - name: strimzi-tmp
+              mountPath: /tmp
+          env:
+            - name: STRIMZI_NAMESPACE              # the ONE namespace watched for KafkaTopic
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: STRIMZI_KAFKA_BOOTSTRAP_SERVERS # the EXTERNAL Kafka (docker container "external-kafka")
+              value: external-kafka:9092
+            - name: STRIMZI_RESOURCE_LABELS        # which KafkaTopics are mine (any label, not necessarily a Kafka CR name)
+              value: "strimzi.io/cluster=external-kafka"
+            - name: STRIMZI_FULL_RECONCILIATION_INTERVAL_MS
+              value: "30000"                       # lab shortcut (default 120000)
+            - name: STRIMZI_LOG_LEVEL
+              value: INFO
+            # --- connection to a secured external Kafka: SASL/SCRAM over plaintext (lab) ---
+            - name: STRIMZI_SECURITY_PROTOCOL
+              value: SASL_PLAINTEXT
+            - name: STRIMZI_SASL_ENABLED
+              value: "true"
+            - name: STRIMZI_SASL_MECHANISM
+              value: scram-sha-512
+            - name: STRIMZI_SASL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: external-kafka-admin
+                  key: username
+            - name: STRIMZI_SASL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: external-kafka-admin
+                  key: password
+            # Set to "false" if you do not want finalizers on KafkaTopic (see README section 6.9).
+            - name: STRIMZI_USE_FINALIZERS
+              value: "true"
+          livenessProbe:
+            httpGet:
+              path: /healthy
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            limits:
+              memory: 256Mi
+              cpu: 500m
+            requests:
+              memory: 256Mi
+              cpu: 100m

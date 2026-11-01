@@ -1,0 +1,49 @@
+# One Application per regional Kafka. LAB: a `list` generator (2 elements).
+# PRODUCTION: swap it for a `clusters` generator over the clusters registered in ArgoCD
+# (selector: matchLabels {kafka: "true"}) - then registering a cluster in ArgoCD IS creating a region.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kafka-platform
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - { env: prod, region: eu }
+          - { env: prod, region: us }
+  template:
+    metadata:
+      name: 'kafka-platform-{{ .env }}-{{ .region }}'
+    spec:
+      project: kafka-platform
+      sources:
+        - repoURL: http://git-server.git.svc/cgi-bin/git/platform.git
+          targetRevision: main
+          path: chart/kafka-platform
+          helm:
+            valueFiles:
+              - '$values/regions/{{ .region }}.yaml'
+            parameters:
+              - { name: env,    value: '{{ .env }}' }
+              - { name: region, value: '{{ .region }}' }
+        - repoURL: http://git-server.git.svc/cgi-bin/git/platform.git
+          targetRevision: main
+          ref: values
+      destination:
+        server: https://kubernetes.default.svc   # production: name: '{{ .region }}-{{ .env }}'
+        namespace: 'kafka-{{ .env }}-{{ .region }}'
+      syncPolicy:
+        automated:
+          prune: false                            # a Kafka cluster is never auto-pruned: deleting a region is a deliberate act
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+        retry:
+          limit: 10
+          backoff: { duration: 15s, factor: 2, maxDuration: 3m }   # the first sync races the operator's CRDs
+  syncPolicy:
+    preserveResourcesOnDeletion: true             # deleting the ApplicationSet/Application NEVER deletes a Kafka cluster

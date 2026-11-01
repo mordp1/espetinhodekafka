@@ -1,0 +1,5 @@
+apiVersion: v2
+name: kafka-tenant
+description: Topics and users of ONE team (app) on ONE regional Kafka. Repo #2 of 2 - the platform team owns the chart, each team owns only its apps/<team>/ folder.
+type: application
+version: 0.1.0

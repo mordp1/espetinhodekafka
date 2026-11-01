@@ -1,0 +1,13 @@
+# Kafka allows topic names that Kubernetes does not (upper case, underscore).
+# metadata.name must be a valid DNS-1123 name; spec.topicName carries the real Kafka name.
+# The name can NOT be changed after creation.
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: orders-v1-dlq
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  topicName: Orders_V1.DLQ
+  partitions: 1
+  replicas: 3

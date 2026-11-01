@@ -1,0 +1,14 @@
+# --- injected by the ApplicationSet from the FOLDER PATH apps/<app>/<env>/<cluster>/ (never typed by hand) ---
+app: ""
+env: ""
+cluster: ""
+
+# --- placement / policy (set in the leaf apps/<app>/<env>/<cluster>/values.yaml) ---
+enabled: false         # read by the ApplicationSet: only leaves with enabled: true become an Application
+kafkaCluster: kafka    # platform convention: the Kafka CR of every region is called "kafka"
+topicPrefix: ""        # per-site prefix (e.g. "eu."), prepended to EVERY physical topic name on this site
+protectTopics: true    # true => KafkaTopics get Prune=false,Delete=false (see README, section "Two-step topic deletion")
+
+# --- what the team declares (maps, not lists: Helm deep-merges maps across common -> env -> cluster files) ---
+topics: {}
+users: {}

@@ -1,0 +1,8 @@
+# GRANTS given by team PAYMENTS to team INVENTORY. This file lives in the OWNER's folder, so
+# CODEOWNERS (/apps/payments/ -> @acme-corp/team-payments) forces the owner to approve every change.
+# Merging a PR that edits this file == "payments agrees that inventory may use these topics".
+grantee: inventory
+topics:
+  refunds:                             # short name of a topic owned by payments
+    operations: [Read, Describe]       # the MAXIMUM inventory may request
+    requestedIn: "seed"                # filled in by the access-request PR

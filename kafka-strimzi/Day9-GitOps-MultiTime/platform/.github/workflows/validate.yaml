@@ -1,0 +1,18 @@
+name: validate-platform
+on:
+  pull_request:
+    paths: ["chart/**", "regions/**", "argocd/**"]
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: lint + render every region
+        run: |
+          helm lint chart/kafka-platform
+          for f in regions/*.yaml; do
+            r=$(basename "$f" .yaml)
+            helm template "kafka-$r" chart/kafka-platform -f "$f" --set env=prod --set region="$r" > /dev/null
+            echo "rendered $r OK"
+          done

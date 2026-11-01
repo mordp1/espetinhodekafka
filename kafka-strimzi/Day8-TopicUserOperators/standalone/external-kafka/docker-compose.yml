@@ -1,0 +1,26 @@
+# Kafka "outside Kubernetes". It joins the docker network that kind creates ("kind"), so the pods
+# of the kind cluster reach it by NAME (external-kafka:9092) — no port-forward, no host IP.
+# Requires the kind cluster to exist first (the "kind" network is created by "kind create cluster").
+services:
+  external-kafka:
+    image: apache/kafka:4.3.0
+    container_name: external-kafka
+    hostname: external-kafka
+    volumes:
+      - ./server.properties:/etc/external-kafka/server.properties:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        cp /etc/external-kafka/server.properties /tmp/server.properties
+        # --add-scram registers the bootstrap SCRAM credential INSIDE the KRaft metadata log at
+        # format time. Without it nobody could authenticate to create the first user.
+        /opt/kafka/bin/kafka-storage.sh format --ignore-formatted \
+          -t MkU3OEVBNTcwNTJENDM2Qk \
+          -c /tmp/server.properties \
+          --add-scram 'SCRAM-SHA-512=[name=admin,password=admin-secret]'
+        exec /opt/kafka/bin/kafka-server-start.sh /tmp/server.properties
+
+networks:
+  default:
+    name: kind
+    external: true

@@ -1,0 +1,79 @@
+# A tiny Git server INSIDE the kind cluster, so the whole lab runs offline and ArgoCD has a real Git remote
+# (smart HTTP via git-http-backend + busybox httpd). LAB ONLY: no auth, data in an emptyDir.
+# In real life this is GitHub / GitLab / Bitbucket - the ArgoCD manifests only change the repoURL.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: git
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: git-server-scripts
+  namespace: git
+data:
+  git-cgi: |
+    #!/bin/sh
+    export GIT_PROJECT_ROOT=/repos
+    export GIT_HTTP_EXPORT_ALL=1
+    exec /usr/libexec/git-core/git-http-backend
+  start.sh: |
+    #!/bin/sh
+    set -e
+    apk add --no-cache git git-daemon busybox-extras >/dev/null
+    git config --global --add safe.directory '*'
+    mkdir -p /repos /www/cgi-bin
+    for r in platform tenants; do
+      if [ ! -d /repos/$r.git ]; then
+        git init -q --bare -b main /repos/$r.git
+        git -C /repos/$r.git config http.receivepack true     # anonymous push (lab only)
+      fi
+    done
+    cp /scripts/git-cgi /www/cgi-bin/git && chmod +x /www/cgi-bin/git
+    echo "git server ready"
+    exec httpd -f -v -p 8080 -h /www
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: git-server
+  namespace: git
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: git-server }
+  template:
+    metadata:
+      labels: { app: git-server }
+    spec:
+      containers:
+        - name: git
+          image: alpine:3.20
+          command: ["sh", "/scripts/start.sh"]
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: "/cgi-bin/git/platform.git/info/refs?service=git-upload-pack"
+              port: 8080
+            initialDelaySeconds: 8
+            periodSeconds: 5
+          volumeMounts:
+            - { name: scripts, mountPath: /scripts }
+            - { name: repos, mountPath: /repos }
+      volumes:
+        - name: scripts
+          configMap: { name: git-server-scripts }
+        - name: repos
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: git-server
+  namespace: git
+spec:
+  selector: { app: git-server }
+  ports:
+    - port: 80
+      targetPort: 8080

@@ -1,0 +1,23 @@
+# GUARDRAIL #1 - what a tenant Application is allowed to do, no matter what is in Git:
+#   * only KafkaTopic and KafkaUser (no Secrets, no Deployments, no RBAC, no cluster-scoped objects)
+#   * only into the Kafka namespaces (kafka-<env>-<region>)
+#   * only from the tenants repo
+# Even a malicious/buggy chart change cannot escape this box.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: kafka-tenants
+  namespace: argocd
+spec:
+  description: Topics and users of the product teams
+  sourceRepos:
+    - http://git-server.git.svc/cgi-bin/git/tenants.git
+  destinations:
+    - server: https://kubernetes.default.svc      # production: one registered cluster per region (name: eu-prod ...)
+      namespace: "kafka-*"
+  clusterResourceWhitelist: []                    # nothing cluster-scoped
+  namespaceResourceWhitelist:
+    - { group: kafka.strimzi.io, kind: KafkaTopic }
+    - { group: kafka.strimzi.io, kind: KafkaUser }
+  orphanedResources:
+    warn: true

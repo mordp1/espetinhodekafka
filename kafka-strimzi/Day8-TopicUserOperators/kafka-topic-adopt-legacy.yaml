@@ -1,0 +1,16 @@
+# Adopting a topic that already exists in Kafka (created by hand / by an app / before the operator).
+# WARNING: the spec becomes the TRUTH. Any topic config that exists in Kafka but is NOT in this
+# spec is reset to the broker default (reproduced in the README, section 6.6: cleanup.policy=compact vanished).
+# => Before adopting, read the real config:  kafka-configs.sh --describe --entity-type topics --entity-name <t>
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: legacy.payments
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  partitions: 6
+  replicas: 3
+  config:
+    retention.ms: 172800000
+    cleanup.policy: compact   # <- copied from the real topic BEFORE adopting, so nothing changes

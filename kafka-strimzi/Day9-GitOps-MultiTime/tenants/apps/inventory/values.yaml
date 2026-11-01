@@ -1,0 +1,14 @@
+# TEAM INVENTORY
+topics:
+  stock-updates:
+    partitions: 3
+
+users:
+  stock-service:
+    authentication: scram-sha-512
+    access:
+      - topic: stock-updates
+        operations: [Write, Read, Describe]
+      - topic: payments.refunds        # a DOT = ANOTHER team's topic -> needs a grant in apps/payments/grants/inventory.yaml
+        operations: [Read, Describe]
+        group: refund-sync

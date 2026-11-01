@@ -1,0 +1,19 @@
+# TEAM PAYMENTS
+topics:
+  transactions:
+    partitions: 12
+    config:
+      retention.ms: 2592000000         # 30d
+      min.insync.replicas: 1           # LAB (1 broker). Production: 2
+  refunds:
+    partitions: 3
+
+users:
+  processor:                           # KafkaUser "payments-processor"
+    authentication: scram-sha-512
+    access:
+      - topic: transactions
+        operations: [Write, Read, Describe]
+        group: processor
+      - topic: refunds
+        operations: [Write, Describe]

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kafka-platform
+description: One regional Kafka (Strimzi Kafka + KafkaNodePool + platform admin user). Repo #1 of 2 - owned by the platform team.
+type: application
+version: 0.1.0
+appVersion: "4.3.0"

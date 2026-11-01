@@ -1,0 +1,21 @@
+# Defaults for ONE regional Kafka. Per-region differences live in ../../regions/<region>.yaml
+# The name of the Kafka CR is a CONVENTION shared with the tenants repo: every regional cluster is
+# called "kafka" and lives in the namespace kafka-<env>-<region>. Tenants never need to know more.
+clusterName: kafka
+region: eu
+env: prod
+
+kafka:
+  version: 4.3.0
+  metadataVersion: 4.3-IV0
+  replicas: 3            # dual-role (controller+broker) nodes. LAB: regions/*.yaml sets 1.
+  storage:
+    size: 10Gi
+  config: {}             # extra broker config merged over the platform defaults
+
+# Platform break-glass user (superuser). Tenants NEVER get superuser: they only get ACLs, via the tenants repo.
+superUsers:
+  - platform-admin
+
+entityOperator:
+  reconciliationIntervalMs: 120000   # Strimzi default. LAB: regions/*.yaml lowers it.

@@ -1,0 +1,5 @@
+# ENV layer (optional): applies to every cluster of this env. Layering: common -> env -> cluster.
+topics:
+  events-dlq:
+    config:
+      retention.ms: 2592000000         # prod keeps DLQs 30d (common says 14d)

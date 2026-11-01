@@ -1,0 +1,13 @@
+{{- range .Values.superUsers }}
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata:
+  name: {{ . }}
+  labels:
+    strimzi.io/cluster: {{ $.Values.clusterName }}
+    {{- include "kafka-platform.labels" $ | nindent 4 }}
+spec:
+  authentication:
+    type: scram-sha-512
+{{- end }}

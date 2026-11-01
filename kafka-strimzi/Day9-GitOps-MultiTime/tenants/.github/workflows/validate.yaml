@@ -1,0 +1,47 @@
+name: validate-tenants
+on:
+  pull_request:
+    paths: ["apps/**", "chart/**", "argocd/**", "ci/**", ".github/CODEOWNERS"]
+  workflow_dispatch: {}          # re-run by hand after an access-request PR is merged
+
+permissions:
+  contents: write                # push the access-request/* branches
+  pull-requests: write           # open/update the access-request PRs
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: azure/setup-helm@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r ci/requirements.txt
+
+      - name: 1) every leaf must render (schema = policy)
+        run: ci/render-all.sh
+
+      - name: 2) structure, ownership and cross-team access
+        id: access
+        run: |
+          set +e
+          python ci/validate.py --report report.json
+          echo "rc=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: 3) open a PR for the OWNER team of every topic that was requested
+        if: steps.access.outputs.rc == '2'
+        env:
+          # PRs opened with the default GITHUB_TOKEN do NOT trigger workflows. Use a GitHub App token (or a PAT)
+          # if you want CI to run on the access-request PR itself.
+          GH_TOKEN: ${{ secrets.ACCESS_BOT_TOKEN || github.token }}
+        run: |
+          python ci/open_grant_prs.py --report report.json --create-pr \
+            --requested-by "${{ github.event.pull_request.html_url }}"
+
+      - name: 4) block the requester's PR until the owner has approved
+        if: steps.access.outputs.rc != '0'
+        run: |
+          echo "::error::Cross-team access is pending (or the config has errors). See the job log above."
+          exit 1

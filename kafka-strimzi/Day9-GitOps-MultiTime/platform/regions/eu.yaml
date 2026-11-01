@@ -1,0 +1,9 @@
+# Values specific to the EU Kafka. A new region = a new file like this + one element in
+# argocd/applicationset.yaml. Nothing else in this repo changes.
+region: eu
+kafka:
+  replicas: 1                          # LAB: 1 node. Production: 3+ (RF=3, min.isr=2 are derived automatically)
+  storage:
+    size: 5Gi
+entityOperator:
+  reconciliationIntervalMs: 30000      # LAB shortcut

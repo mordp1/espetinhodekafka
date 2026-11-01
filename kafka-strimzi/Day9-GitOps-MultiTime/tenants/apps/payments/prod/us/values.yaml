@@ -1,0 +1,1 @@
+enabled: false                         # payments is not live in the US yet -> flip to true in a PR (README, scenario B)

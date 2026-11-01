@@ -1,0 +1,126 @@
+# Standalone User Operator — adapted from install/user-operator/ of the Strimzi 1.1.0 release
+# (01-ServiceAccount, 02-Role, 03-RoleBinding, 05-Deployment merged in one file).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: strimzi-user-operator
+  labels:
+    app: strimzi
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: strimzi-user-operator
+  labels:
+    app: strimzi
+rules:
+  - apiGroups: ["kafka.strimzi.io"]
+    resources: ["kafkausers"]
+    verbs: ["get", "list", "watch", "create", "patch", "update"]
+  - apiGroups: ["kafka.strimzi.io"]
+    resources: ["kafkausers/status"]
+    verbs: ["get", "patch", "update"]
+  - apiGroups: ["kafka.strimzi.io"]
+    resources: ["kafkausers/finalizers"]
+    verbs: ["update"]
+  - apiGroups: [""]
+    resources: ["secrets"]            # the operator WRITES the credentials Secret of each KafkaUser
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: strimzi-user-operator
+  labels:
+    app: strimzi
+subjects:
+  - kind: ServiceAccount
+    name: strimzi-user-operator
+roleRef:
+  kind: Role
+  name: strimzi-user-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: strimzi-user-operator
+  labels:
+    app: strimzi
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      name: strimzi-user-operator
+  template:
+    metadata:
+      labels:
+        name: strimzi-user-operator
+    spec:
+      serviceAccountName: strimzi-user-operator
+      volumes:
+        - name: strimzi-tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 5Mi
+      containers:
+        - name: strimzi-user-operator
+          image: quay.io/strimzi/operator:1.1.0
+          args:
+            - /opt/strimzi/bin/user_operator_run.sh
+          volumeMounts:
+            - name: strimzi-tmp
+              mountPath: /tmp
+          env:
+            - name: STRIMZI_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: STRIMZI_KAFKA_BOOTSTRAP_SERVERS
+              value: external-kafka:9092
+            - name: STRIMZI_LABELS                 # which KafkaUsers are mine
+              value: "strimzi.io/cluster=external-kafka"
+            # Mandatory env vars even when you only use SCRAM: the CA (cert + key) that SIGNS the
+            # certificates of `authentication: tls` KafkaUsers. You create these 2 Secrets yourself.
+            - name: STRIMZI_CA_CERT_NAME
+              value: external-clients-ca-cert
+            - name: STRIMZI_CA_KEY_NAME
+              value: external-clients-ca
+            - name: STRIMZI_ACLS_ADMIN_API_SUPPORTED
+              value: "true"
+            - name: STRIMZI_FULL_RECONCILIATION_INTERVAL_MS
+              value: "30000"                       # lab shortcut (default 120000)
+            - name: STRIMZI_LOG_LEVEL
+              value: INFO
+            # There is NO dedicated SASL variable in the User Operator: the connection to a secured
+            # Kafka is a plain Admin client properties block. It carries the password -> from a Secret.
+            - name: STRIMZI_KAFKA_ADMIN_CLIENT_CONFIGURATION
+              valueFrom:
+                secretKeyRef:
+                  name: external-kafka-admin
+                  key: admin-client.properties
+            # Principals the operator must never touch (ACLs, quotas, SCRAM). Shown here as the
+            # safety net you want when ADOPTING an existing Kafka (see README section 7.6).
+            - name: STRIMZI_IGNORED_USERS_PATTERN
+              value: "^(admin|ANONYMOUS)$"
+          livenessProbe:
+            httpGet:
+              path: /healthy
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            limits:
+              memory: 256Mi
+              cpu: 500m
+            requests:
+              memory: 256Mi
+              cpu: 100m
