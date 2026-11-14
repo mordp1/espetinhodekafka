@@ -1,0 +1,36 @@
+# Alert ROUTING as code (a namespaced CR the Prometheus Operator merges into Alertmanager's config).
+# Rule of the house: an alert reaches a human only if its PrometheusRule carries `team: kafka-platform`.
+# The label is the contract between "who writes the alert" and "who gets paged".
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: kafka-platform
+  labels:
+    alertmanagerConfig: strimzi-lab       # matches alertmanagerConfigSelector in the kube-prometheus-stack values
+spec:
+  route:
+    receiver: lab-webhook
+    matchers:
+      - { name: team, value: kafka-platform, matchType: "=" }
+    groupBy: [alertname, namespace]
+    groupWait: 10s
+    groupInterval: 1m
+    repeatInterval: 1h
+    routes:
+      - receiver: lab-webhook              # production: critical -> PagerDuty, warning -> Slack (examples below)
+        matchers: [{ name: severity, value: critical, matchType: "=" }]
+        repeatInterval: 15m
+  receivers:
+    - name: lab-webhook
+      webhookConfigs:
+        - url: http://alert-webhook.monitoring.svc:8080/
+          sendResolved: true
+    # --- production receivers (the secret lives in a Secret, never in Git) ---
+    # - name: slack-kafka
+    #   slackConfigs:
+    #     - channel: "#kafka-alerts"
+    #       apiURL: { name: slack-webhook, key: url }
+    #       sendResolved: true
+    # - name: pagerduty-kafka
+    #   pagerdutyConfigs:
+    #     - routingKey: { name: pagerduty, key: routing-key }

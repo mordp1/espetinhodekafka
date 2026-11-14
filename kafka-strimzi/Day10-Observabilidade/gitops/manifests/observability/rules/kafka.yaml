@@ -1,0 +1,67 @@
+# Broker/controller alerts, adapted from the official Strimzi examples (examples/metrics/prometheus-install/prometheus-rules, 1.1.0).
+# Differences: team label for routing, runbook-style descriptions, and "for" values that make the lab demos fire in ~1 minute.
+# PRODUCTION: keep "for" at 5m+ for anything that self-heals (a rolling restart makes URP > 0 for a minute and that is NORMAL).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kafka-brokers
+  labels: { role: alert-rules, app: strimzi }
+spec:
+  groups:
+    - name: kafka-brokers
+      rules:
+        - alert: KafkaUnderReplicatedPartitions
+          expr: sum by (namespace, kubernetes_pod_name) (kafka_server_replicamanager_underreplicatedpartitions) > 0
+          for: 30s
+          labels: { severity: warning, team: kafka-platform }
+          annotations:
+            summary: "{{ $value }} under-replicated partitions on {{ $labels.kubernetes_pod_name }}"
+            description: "A follower is not in sync. Normal for ~1 min during a rolling restart; if it persists a broker is down, slow or its disk is full."
+        - alert: KafkaUnderMinIsrPartitions
+          expr: sum by (namespace, kubernetes_pod_name) (kafka_server_replicamanager_underminisrpartitioncount) > 0
+          for: 30s
+          labels: { severity: critical, team: kafka-platform }
+          annotations:
+            summary: "{{ $value }} partitions below min.insync.replicas on {{ $labels.kubernetes_pod_name }}"
+            description: "Producers with acks=all get NotEnoughReplicas for these partitions: writes are being REJECTED."
+        - alert: KafkaOfflinePartitions
+          expr: sum by (namespace) (kafka_controller_kafkacontroller_offlinepartitionscount) > 0
+          for: 30s
+          labels: { severity: critical, team: kafka-platform }
+          annotations:
+            summary: "{{ $value }} partitions have no leader in {{ $labels.namespace }}"
+            description: "Reads AND writes are unavailable for those partitions."
+        - alert: KafkaAbnormalControllerState
+          expr: sum by (namespace) (kafka_controller_kafkacontroller_activecontrollercount) != 1
+          for: 1m
+          labels: { severity: critical, team: kafka-platform }
+          annotations:
+            summary: "{{ $value }} active controllers in {{ $labels.namespace }} (expected exactly 1)"
+        - alert: KafkaBrokerScrapeDown
+          expr: up{strimzi_io_component_type="kafka"} == 0
+          for: 1m
+          labels: { severity: critical, team: kafka-platform }
+          annotations:
+            summary: "Prometheus cannot scrape {{ $labels.kubernetes_pod_name }}"
+        # ---- below: kube-state-metrics + kubelet ("native" Kubernetes signals, not Kafka's own)
+        - alert: KafkaPodNotReady
+          expr: kube_pod_status_ready{namespace="kafka", condition="true", pod=~"my-cluster-dual-role-[0-9]+"} == 0
+          for: 1m
+          labels: { severity: critical, team: kafka-platform }
+          annotations:
+            summary: "Pod {{ $labels.pod }} is not Ready"
+        - alert: KafkaContainerRestarting
+          expr: increase(kube_pod_container_status_restarts_total{namespace="kafka", container="kafka"}[15m]) > 2
+          labels: { severity: warning, team: kafka-platform }
+          annotations:
+            summary: "{{ $labels.pod }} restarted {{ $value | printf \"%.0f\" }} times in 15 minutes"
+            description: "Look at the previous container's logs (kubectl logs --previous) and at OOMKilled in the pod status."
+        - alert: KafkaRunningOutOfDisk
+          expr: |
+            kubelet_volume_stats_available_bytes{namespace="kafka", persistentvolumeclaim=~"data-[0-9]+-my-cluster-.*"}
+              / kubelet_volume_stats_capacity_bytes{namespace="kafka", persistentvolumeclaim=~"data-[0-9]+-my-cluster-.*"} < 0.15
+          for: 5m
+          labels: { severity: warning, team: kafka-platform }
+          annotations:
+            summary: "PVC {{ $labels.persistentvolumeclaim }} has less than 15% free"
+            description: "Kafka stops when a log dir fills up. Fix before it happens: retention, more disk (Day 3/7), or Cruise Control intra-broker rebalance (Day 7)."

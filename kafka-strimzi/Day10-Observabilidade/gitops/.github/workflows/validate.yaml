@@ -1,0 +1,12 @@
+# NOT executed in the lab (no GitHub here) - the SAME script runs locally: ci/validate.sh
+name: validate-observability
+on:
+  pull_request:
+    paths: ["manifests/**", "apps/**", "ci/**"]
+jobs:
+  validate:
+    runs-on: ubuntu-latest          # ships kubectl, docker, python3 and jq
+    steps:
+      - uses: actions/checkout@v4
+      - name: kustomize + dashboards JSON + promtool check + promtool unit tests
+        run: ci/validate.sh

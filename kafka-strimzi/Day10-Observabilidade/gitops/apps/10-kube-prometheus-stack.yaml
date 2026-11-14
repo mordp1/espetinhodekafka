@@ -1,0 +1,81 @@
+# Wave 0: Prometheus Operator + Prometheus + Alertmanager + Grafana + kube-state-metrics (the "native" one: pods, PVCs, StatefulSets).
+# The values below are the whole "design": everything else in this Day is just CRs (PodMonitor, PrometheusRule, ConfigMap)
+# that this stack discovers on its own - nobody edits Prometheus' config file.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: observability
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 93.3.0
+    helm:
+      releaseName: kps
+      valuesObject:
+        # ---- Prometheus: pick up EVERY PodMonitor/ServiceMonitor/PrometheusRule in the cluster, not only the ones labelled "release=kps".
+        # (This is the #1 reason "my PodMonitor does nothing": the default selector requires the Helm release label.)
+        prometheus:
+          service: { type: NodePort, nodePort: 30090 }
+          prometheusSpec:
+            serviceMonitorSelectorNilUsesHelmValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+            ruleSelectorNilUsesHelmValues: false
+            retention: 6h                  # LAB. Production: size it (retention + remote_write / Thanos / Mimir).
+            resources:
+              requests: { cpu: 100m, memory: 512Mi }
+              limits: { memory: 1Gi }
+        # ---- Alertmanager: routes live in AlertmanagerConfig CRs (see manifests/observability/alertmanagerconfig.yaml)
+        alertmanager:
+          service: { type: NodePort, nodePort: 30093 }
+          alertmanagerSpec:
+            # Default is "OnNamespace": every route would be forced to match namespace=<where the CR lives>, so alerts coming
+            # from the kafka namespace would never reach a receiver defined in monitoring. "None" = the CR decides.
+            alertmanagerConfigMatcherStrategy: { type: None }
+            alertmanagerConfigSelector: { matchLabels: { alertmanagerConfig: strimzi-lab } }
+            resources:
+              requests: { cpu: 10m, memory: 64Mi }
+        # ---- Grafana: dashboards and datasources are ConfigMaps in Git, found by the sidecar (label) in ANY namespace
+        grafana:
+          adminPassword: admin               # LAB ONLY
+          service: { type: NodePort, nodePort: 30300 }
+          sidecar:
+            dashboards:
+              enabled: true
+              label: grafana_dashboard
+              labelValue: "1"
+              searchNamespace: ALL
+              folderAnnotation: grafana_folder          # annotation on the ConfigMap -> Grafana folder
+              provider: { foldersFromFilesStructure: true }
+            datasources:
+              enabled: true
+              label: grafana_datasource
+              labelValue: "1"
+              searchNamespace: ALL
+          resources:
+            requests: { cpu: 50m, memory: 192Mi }
+        # ---- kind has no etcd/scheduler/controller-manager/kube-proxy endpoints to scrape: turn them off or they alert as "down"
+        kubeEtcd: { enabled: false }
+        kubeScheduler: { enabled: false }
+        kubeControllerManager: { enabled: false }
+        kubeProxy: { enabled: false }
+        nodeExporter: { enabled: false }     # needs host mounts that Docker Desktop's kind does not provide
+        prometheus-node-exporter: { enabled: false }
+        kube-state-metrics:
+          resources:
+            requests: { cpu: 10m, memory: 64Mi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff: { duration: 15s, factor: 2, maxDuration: 3m }

@@ -1,0 +1,16 @@
+# One AppProject for the whole observability platform.
+# LAB: permissive (any repo, any namespace, any kind) because the platform installs CRDs, operators and cluster-wide RBAC.
+# PRODUCTION: this is the file you tighten - pin `sourceRepos` to your Git URL, list the `destinations` namespaces
+# explicitly, and use `clusterResourceWhitelist` / `namespaceResourceBlacklist` to say which kinds this project may create.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: observability
+  namespace: argocd
+spec:
+  description: Strimzi + Prometheus + Grafana + Tempo + demo pipeline
+  sourceRepos: ["*"]
+  destinations:
+    - { server: https://kubernetes.default.svc, namespace: "*" }
+  clusterResourceWhitelist:
+    - { group: "*", kind: "*" }

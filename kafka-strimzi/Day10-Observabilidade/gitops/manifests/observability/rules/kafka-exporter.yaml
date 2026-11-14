@@ -1,0 +1,32 @@
+# Alerts based on the Kafka Exporter (consumer-group lag and topic offsets). Adapted from the official Strimzi examples.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kafka-exporter
+  labels: { role: alert-rules, app: strimzi }
+spec:
+  groups:
+    - name: kafka-exporter
+      rules:
+        - alert: KafkaConsumerGroupLagHigh
+          # lag is per partition; sum it per group+topic so ONE alert fires per consumer, not one per partition
+          expr: sum by (consumergroup, topic) (kafka_consumergroup_lag{topic!="__consumer_offsets"}) > 500
+          for: 1m
+          labels: { severity: warning, team: kafka-platform }
+          annotations:
+            summary: "Group {{ $labels.consumergroup }} is {{ $value }} messages behind on {{ $labels.topic }}"
+            description: "The consumer is slower than the producer, stuck, or down. Compare with the consume-rate panel before scaling."
+        - alert: KafkaTopicStoppedReceivingMessages
+          expr: sum by (topic) (rate(kafka_topic_partition_current_offset{topic!="__consumer_offsets"}[5m])) == 0
+          for: 3m
+          labels: { severity: warning, team: kafka-platform }
+          annotations:
+            summary: "No new messages on {{ $labels.topic }} for 3 minutes"
+        - alert: KafkaExporterTopicUnderReplicated
+          # one alert per TOPIC, not per partition: an unavailable broker makes dozens of partitions under-replicated at once,
+          # and 60 pages for one root cause is how on-call people learn to ignore the pager (we saw exactly that in the lab)
+          expr: sum by (topic) (kafka_topic_partition_under_replicated_partition) > 0
+          for: 1m
+          labels: { severity: warning, team: kafka-platform }
+          annotations:
+            summary: "{{ $labels.topic }} has {{ $value }} under-replicated partitions"

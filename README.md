@@ -108,8 +108,9 @@ para montar o laboratório localmente.
 | Day 7 | Cruise Control Avançado — rebalanceamento, goals, JBOD e automação |
 | Day 8 | Topic Operator e User Operator — tópicos e usuários como código, sincronização, modo standalone com Kafka fora do Kubernetes |
 | Day 9 | Bônus: GitOps multi-time — ArgoCD ApplicationSet, `APP/ENV/CLUSTER`, CODEOWNERS e PR automático de acesso entre times |
+| Day 10 | Observabilidade — Prometheus, Grafana, kube-state-metrics, alertas com testes (`promtool`), tracing de ponta a ponta (OpenTelemetry + Tempo) e GitOps |
 
-📁 [kafka-strimzi/Day1-Introducao/](kafka-strimzi/Day1-Introducao/) · [kafka-strimzi/Day2-NodePools/](kafka-strimzi/Day2-NodePools/) · [kafka-strimzi/Day3-NodePools-Avancado/](kafka-strimzi/Day3-NodePools-Avancado/) · [kafka-strimzi/Day4-Autenticacao-Autorizacao/](kafka-strimzi/Day4-Autenticacao-Autorizacao/) · [kafka-strimzi/Day5-KafkaAccessOperator/](kafka-strimzi/Day5-KafkaAccessOperator/) · [kafka-strimzi/Day6-CruiseControl/](kafka-strimzi/Day6-CruiseControl/) · [kafka-strimzi/Day7-CruiseControl-Avancado/](kafka-strimzi/Day7-CruiseControl-Avancado/) · [kafka-strimzi/Day8-TopicUserOperators/](kafka-strimzi/Day8-TopicUserOperators/) · [kafka-strimzi/Day9-GitOps-MultiTime/](kafka-strimzi/Day9-GitOps-MultiTime/)
+📁 [kafka-strimzi/Day1-Introducao/](kafka-strimzi/Day1-Introducao/) · [kafka-strimzi/Day2-NodePools/](kafka-strimzi/Day2-NodePools/) · [kafka-strimzi/Day3-NodePools-Avancado/](kafka-strimzi/Day3-NodePools-Avancado/) · [kafka-strimzi/Day4-Autenticacao-Autorizacao/](kafka-strimzi/Day4-Autenticacao-Autorizacao/) · [kafka-strimzi/Day5-KafkaAccessOperator/](kafka-strimzi/Day5-KafkaAccessOperator/) · [kafka-strimzi/Day6-CruiseControl/](kafka-strimzi/Day6-CruiseControl/) · [kafka-strimzi/Day7-CruiseControl-Avancado/](kafka-strimzi/Day7-CruiseControl-Avancado/) · [kafka-strimzi/Day8-TopicUserOperators/](kafka-strimzi/Day8-TopicUserOperators/) · [kafka-strimzi/Day9-GitOps-MultiTime/](kafka-strimzi/Day9-GitOps-MultiTime/) · [kafka-strimzi/Day10-Observabilidade/](kafka-strimzi/Day10-Observabilidade/)
 
 ---
 

@@ -1,0 +1,57 @@
+# LAB-ONLY alert receiver: prints every alert Alertmanager sends, so you can SEE the notification path without a Slack/PagerDuty account.
+#   kubectl -n monitoring logs deploy/alert-webhook -f
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alert-webhook-script
+data:
+  server.py: |
+    import json
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    class H(BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = json.loads(self.rfile.read(int(self.headers["content-length"])))
+            for a in body["alerts"]:
+                l, n = a["labels"], a["annotations"]
+                print(f"[{a['status'].upper():8}] {l.get('severity', '-'):8} {l['alertname']}: "
+                      f"{n.get('summary') or n.get('description') or n.get('message', '')}", flush=True)
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    HTTPServer(("", 8080), H).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: alert-webhook }
+  template:
+    metadata:
+      labels: { app: alert-webhook }
+    spec:
+      containers:
+        - name: webhook
+          image: python:3.12-alpine
+          command: ["python", "-u", "/app/server.py"]
+          ports: [{ containerPort: 8080 }]
+          resources:
+            requests: { cpu: 5m, memory: 24Mi }
+          volumeMounts: [{ name: script, mountPath: /app }]
+      volumes:
+        - name: script
+          configMap: { name: alert-webhook-script }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alert-webhook
+spec:
+  selector: { app: alert-webhook }
+  ports: [{ port: 8080, targetPort: 8080 }]

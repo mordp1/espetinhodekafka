@@ -1,0 +1,13 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    # The monitoring Services use fixed NodePorts (see gitops/apps/10-kube-prometheus-stack.yaml); kind maps them to
+    # localhost so Grafana/Prometheus/Alertmanager open straight in the browser, with no port-forward.
+    extraPortMappings:
+      - { containerPort: 30300, hostPort: 3000, listenAddress: "127.0.0.1" }   # Grafana
+      - { containerPort: 30090, hostPort: 9090, listenAddress: "127.0.0.1" }   # Prometheus
+      - { containerPort: 30093, hostPort: 9093, listenAddress: "127.0.0.1" }   # Alertmanager
+  - role: worker
+  - role: worker
+  - role: worker      # 3 workers + required pod anti-affinity = exactly ONE broker per node (the broker-down scenario relies on it)

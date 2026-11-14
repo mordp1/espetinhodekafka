@@ -1,0 +1,21 @@
+# Grafana datasource as code: the sidecar picks up ConfigMaps labelled grafana_datasource=1.
+# The Prometheus datasource (uid "prometheus") is already provisioned by kube-prometheus-stack.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasource-tempo
+  labels:
+    grafana_datasource: "1"
+data:
+  tempo.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Tempo
+        uid: tempo
+        type: tempo
+        access: proxy
+        url: http://tempo.monitoring.svc:3200
+        jsonData:
+          nodeGraph: { enabled: true }
+          tracesToMetrics:
+            datasourceUid: prometheus

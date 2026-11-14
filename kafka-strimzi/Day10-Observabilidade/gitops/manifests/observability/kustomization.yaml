@@ -1,0 +1,40 @@
+# Everything in this folder is OBSERVABILITY AS CODE. ArgoCD renders it with kustomize; Prometheus/Alertmanager/Grafana
+# discover it by labels, in any namespace. No UI click, no config reload, no "who changed that dashboard".
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring
+resources:
+  - podmonitors.yaml
+  - rules/kafka.yaml
+  - rules/kafka-exporter.yaml
+  - rules/strimzi-operators.yaml
+  - rules/strimzi-crs.yaml
+  - rules/e2e-pipeline.yaml
+  - alertmanagerconfig.yaml
+  - alert-webhook.yaml
+  - datasource-tempo.yaml
+  - ksm/configmap.yaml
+  - ksm/ksm.yaml
+
+# One ConfigMap per dashboard JSON; the Grafana sidecar loads anything labelled grafana_dashboard=1 and puts it in the folder
+# named by the grafana_folder annotation. disableNameSuffixHash: keep the name stable (the sidecar does not care about the hash).
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    grafana_dashboard: "1"
+configMapGenerator:
+  - name: dashboard-strimzi-kafka
+    files: [dashboards/strimzi-kafka.json]
+    options: { annotations: { grafana_folder: Strimzi } }
+  - name: dashboard-strimzi-kraft
+    files: [dashboards/strimzi-kraft.json]
+    options: { annotations: { grafana_folder: Strimzi } }
+  - name: dashboard-strimzi-kafka-exporter
+    files: [dashboards/strimzi-kafka-exporter.json]
+    options: { annotations: { grafana_folder: Strimzi } }
+  - name: dashboard-strimzi-operators
+    files: [dashboards/strimzi-operators.json]
+    options: { annotations: { grafana_folder: Strimzi } }
+  - name: dashboard-e2e-pipeline
+    files: [dashboards/e2e-pipeline.json]
+    options: { annotations: { grafana_folder: Pipeline } }

@@ -1,0 +1,29 @@
+# Wave 0: operators and CRDs first. Strimzi Cluster Operator from the OFFICIAL Helm chart, version pinned
+# (upgrading Strimzi = a reviewed PR changing this one line; that is Day 16's video).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: strimzi-operator
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: observability
+  source:
+    repoURL: https://strimzi.io/charts/
+    chart: strimzi-kafka-operator
+    targetRevision: 1.1.0
+    helm:
+      valuesObject:
+        watchAnyNamespace: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: strimzi-operator
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true      # Strimzi CRDs are bigger than the annotation limit of client-side apply
+    retry:
+      limit: 10
+      backoff: { duration: 15s, factor: 2, maxDuration: 3m }

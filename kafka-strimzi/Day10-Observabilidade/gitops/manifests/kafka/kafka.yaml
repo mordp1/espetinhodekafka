@@ -1,0 +1,70 @@
+# 3 nodes with roles controller+broker (dual-role, as in Day 8) - small enough for kind, and a loss of ONE node
+# keeps both the KRaft quorum and min.insync.replicas=2 alive, which is what makes the alert demos safe to run.
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: dual-role
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  replicas: 3
+  roles: [controller, broker]
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 5Gi
+        deleteClaim: true              # LAB: PVC dies with the pool. Production: false.
+        kraftMetadata: shared
+  resources:
+    requests: { cpu: 250m, memory: 1Gi }
+    limits: { memory: 1280Mi }
+  jvmOptions:
+    "-Xms": 512m
+    "-Xmx": 512m
+  template:
+    pod:
+      # One broker per Kubernetes node (what you want in production, per zone/node). In the lab it also makes the
+      # "lose a node" scenario deterministic: cordoning the node of broker-1 takes down ONLY broker-1.
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels: { strimzi.io/pool-name: dual-role }
+              topologyKey: kubernetes.io/hostname
+---
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: my-cluster
+spec:
+  kafka:
+    version: 4.3.0
+    metadataVersion: 4.3-IV0
+    listeners:
+      # LAB ONLY: plaintext, no auth. Day 4 is the TLS/SCRAM/ACL day; here the subject is observability.
+      - { name: plain, port: 9092, type: internal, tls: false }
+    config:
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      default.replication.factor: 3
+      min.insync.replicas: 2
+      auto.create.topics.enable: false
+    # === METRIC SOURCE #1: broker + controller metrics ================================================================
+    # The Strimzi Metrics Reporter runs INSIDE the Kafka JVM as a metrics reporter plugin and serves /metrics on 9404.
+    # No ConfigMap with JMX-exporter rules to maintain (compare with `type: jmxPrometheusExporter`, README section 3).
+    metricsConfig:
+      type: strimziMetricsReporter
+  entityOperator:
+    # === METRIC SOURCE #2: the Topic and User Operator expose their own metrics (:8080) - Prometheus scrapes them via a PodMonitor
+    topicOperator: {}
+    userOperator: {}
+  # === METRIC SOURCE #3: Kafka Exporter - the ONLY source of consumer-group LAG and per-topic offsets/partition state.
+  # Brokers do not know "lag" on their own; the exporter computes it (log end offset - committed offset).
+  kafkaExporter:
+    topicRegex: ".*"
+    groupRegex: ".*"
+    resources:
+      requests: { cpu: 25m, memory: 64Mi }
