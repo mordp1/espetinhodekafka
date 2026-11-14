@@ -1,0 +1,34 @@
+# Wave 1: Grafana Tempo (traces), single-binary mode, in-memory-ish local storage. Receives OTLP from the apps on :4317 (gRPC) / :4318 (HTTP).
+# Production: tempo-distributed or Grafana Cloud, object storage, and an OpenTelemetry Collector in between (see README, section "Indo para produção").
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tempo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: observability
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: tempo
+    targetRevision: 1.24.4
+    helm:
+      releaseName: tempo
+      valuesObject:
+        tempo:
+          retention: 24h
+          resources:
+            requests: { cpu: 50m, memory: 256Mi }
+            limits: { memory: 768Mi }
+        persistence: { enabled: false }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 10
+      backoff: { duration: 15s, factor: 2, maxDuration: 3m }

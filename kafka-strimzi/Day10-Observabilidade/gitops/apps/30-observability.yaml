@@ -1,0 +1,26 @@
+# Wave 2: everything that OBSERVES Kafka, as code: PodMonitors, PrometheusRules, dashboards, datasources, alert routes,
+# and a second kube-state-metrics dedicated to the Strimzi CRs. Rendered by kustomize (dashboards become ConfigMaps).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: observability
+  source:
+    repoURL: http://git-server.git.svc/cgi-bin/git/observability.git
+    targetRevision: main
+    path: manifests/observability
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions:
+      - ServerSideApply=true                # dashboards are big JSON blobs (up to ~80 KB each): do not copy them into the last-applied annotation
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff: { duration: 15s, factor: 2, maxDuration: 3m }

@@ -1,0 +1,237 @@
+# Official Strimzi rules for the CRs (examples/metrics/kube-state-metrics/prometheus-rules.yaml, 1.1.0): "for" cut from 15m to 1m for the lab,
+# and the team label added (the AlertmanagerConfig routes on it). They need the dedicated kube-state-metrics in ../ksm/ksm.yaml.
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: strimzi-kube-state-metrics
+spec:
+  groups:
+    - name: strimzi-kube-state-metrics
+      rules:
+        - alert: KafkaTopicNotReady
+          expr: strimzi_kafka_topic_resource_info{ready!="True"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaTopic {{ $labels.topicName }} is not ready"
+        - alert: KafkaTopicWarnings
+          expr: strimzi_kafka_topic_resource_info{warnings="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaTopic {{ $labels.topicName }} has warnings for the current configuration"
+        - alert: KafkaTopicDeprecated
+          expr: strimzi_kafka_topic_resource_info{deprecated="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaTopic {{ $labels.topicName }} contains a deprecated configuration"
+        - alert: KafkaUserNotReady
+          expr: strimzi_kafka_user_resource_info{ready!="True"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaUser {{ $labels.username }} is not ready"
+        - alert: KafkaUserWarnings
+          expr: strimzi_kafka_user_resource_info{warnings="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaUser {{ $labels.username }} has warnings for the current configuration"
+        - alert: KafkaUserDeprecated
+          expr: strimzi_kafka_user_resource_info{deprecated="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaUser {{ $labels.username }} contains a deprecated configuration"
+        - alert: KafkaNotReady
+          expr: strimzi_kafka_resource_info{ready!="True"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi Kafka {{ $labels.name }} using {{ $labels.kafka_version }} is not ready"
+        - alert: KafkaWarnings
+          expr: strimzi_kafka_resource_info{warnings="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi Kafka {{ $labels.name }} has warnings for the current configuration"
+        - alert: KafkaDeprecated
+          expr: strimzi_kafka_resource_info{deprecated="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi Kafka {{ $labels.name }} contains a deprecated configuration"
+        # KafkaNodePool is not having a ready status as this is implemented via Kafka resource
+        - alert: KafkaNodePoolWarnings
+          expr: strimzi_kafka_node_pool_resource_info{warnings="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaNodePool {{ $labels.name }} has warnings for the current configuration"
+        - alert: KafkaNodePoolDeprecated
+          expr: strimzi_kafka_node_pool_resource_info{deprecated="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaNodePool {{ $labels.name }} contains a deprecated configuration"
+        # StrimziPodSet is not having any further information as it is an internal resource and doesn't get operated by the user
+        - alert: KafkaRebalanceNotReady
+          expr: strimzi_kafka_rebalance_resource_info{ready!="True",template!="true"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaRebalance {{ $labels.name }} is not ready"
+        - alert: KafkaRebalanceWarnings
+          expr: strimzi_kafka_rebalance_resource_info{warnings="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaRebalance {{ $labels.name }} has warnings for the current configuration"
+        - alert: KafkaRebalanceDeprecated
+          expr: strimzi_kafka_rebalance_resource_info{deprecated="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaRebalance {{ $labels.name }} contains a deprecated configuration"
+        - alert: KafkaRebalanceProposalPending
+          expr: strimzi_kafka_rebalance_resource_info{ready="True",template!="true",proposal_ready="True"}
+          for: 1h
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaRebalance {{ $labels.name }} is in proposal pending state and waits for approval for more than 1h."
+        - alert: KafkaRebalanceRebalancing
+          expr: strimzi_kafka_rebalance_resource_info{ready="True",template!="true",rebalancing="True"}
+          for: 1h
+          labels:
+            severity: info
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaRebalance {{ $labels.name }} is taking longer than 1h."
+        - alert: KafkaConnectNotReady
+          expr: strimzi_kafka_connect_resource_info{ready!="True"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaConnect {{ $labels.name }} is not ready"
+        - alert: KafkaConnectWarnings
+          expr: strimzi_kafka_connect_resource_info{warnings="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaConnect {{ $labels.name }} has warnings for the current configuration"
+        - alert: KafkaConnectDeprecated
+          expr: strimzi_kafka_connect_resource_info{deprecated="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaConnect {{ $labels.name }} contains a deprecated configuration"
+        - alert: KafkaConnectorNotReady
+          expr: strimzi_kafka_connector_resource_info{ready!="True"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaConnector {{ $labels.name }} is not ready"
+        - alert: KafkaConnectorWarnings
+          expr: strimzi_kafka_connector_resource_info{warnings="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaConnector {{ $labels.name }} has warnings for the current configuration"
+        - alert: KafkaConnectorDeprecated
+          expr: strimzi_kafka_connector_resource_info{deprecated="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaConnector {{ $labels.name }} contains a deprecated configuration"
+        - alert: KafkaMirrorMaker2NotReady
+          expr: strimzi_kafka_mm2_resource_info{ready!="True"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaMirrorMaker2 {{ $labels.name }} is not ready"
+        - alert: KafkaMirrorMaker2Warnings
+          expr: strimzi_kafka_mm2_resource_info{warnings="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaMirrorMaker2 {{ $labels.name }} has warnings for the current configuration"
+        - alert: KafkaMirrorMaker2Deprecated
+          expr: strimzi_kafka_mm2_resource_info{deprecated="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaMirrorMaker2 {{ $labels.name }} contains a deprecated configuration"
+        - alert: KafkaAccessNotReady
+          expr: strimzi_kafka_access_resource_info{ready!="True"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaAccess {{ $labels.name }} is not ready"
+        - alert: KafkaAccessWarnings
+          expr: strimzi_kafka_access_resource_info{warnings="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaAccess {{ $labels.name }} has warnings for the current configuration"
+        - alert: KafkaAccessDeprecated
+          expr: strimzi_kafka_access_resource_info{deprecated="Warning"}
+          for: 1m
+          labels:
+            severity: warning
+            team: kafka-platform
+          annotations:
+            message: "Strimzi KafkaAccess {{ $labels.name }} contains a deprecated configuration"

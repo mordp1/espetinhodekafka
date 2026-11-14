@@ -1,0 +1,102 @@
+# RATE = messages per second. Change it in Git (a PR!), not with kubectl: ArgoCD selfHeal would revert a kubectl edit.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-producer
+  labels: { app.kubernetes.io/name: order-producer, app.kubernetes.io/part-of: order-pipeline }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: order-producer }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: order-producer, app.kubernetes.io/part-of: order-pipeline }
+    spec:
+      containers:
+        - name: app
+          image: kafka-e2e-demo:0.1.0          # built from lab/app and loaded into kind (README, section 6)
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: ROLE, value: producer }
+            - { name: KAFKA_BOOTSTRAP, value: "my-cluster-kafka-bootstrap.kafka.svc:9092" }
+            - { name: OTEL_SERVICE_NAME, value: order-producer }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://tempo.monitoring.svc:4317" }
+            - { name: RATE, value: "5" }
+          ports:
+            - { name: metrics, containerPort: 8000 }
+          resources:
+            requests: { cpu: 25m, memory: 96Mi }
+            limits: { memory: 256Mi }
+---
+# PROCESS_MS = simulated work per message; ERROR_RATE = fraction of orders that fail validation (0..1).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-processor
+  labels: { app.kubernetes.io/name: order-processor, app.kubernetes.io/part-of: order-pipeline }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: order-processor }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: order-processor, app.kubernetes.io/part-of: order-pipeline }
+    spec:
+      containers:
+        - name: app
+          image: kafka-e2e-demo:0.1.0          # built from lab/app and loaded into kind (README, section 6)
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: ROLE, value: processor }
+            - { name: KAFKA_BOOTSTRAP, value: "my-cluster-kafka-bootstrap.kafka.svc:9092" }
+            - { name: OTEL_SERVICE_NAME, value: order-processor }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://tempo.monitoring.svc:4317" }
+            - { name: PROCESS_MS, value: "30" }
+            - { name: ERROR_RATE, value: "0" }
+          ports:
+            - { name: metrics, containerPort: 8000 }
+          resources:
+            requests: { cpu: 25m, memory: 96Mi }
+            limits: { memory: 256Mi }
+---
+# The last hop: also where the end-to-end latency is measured (now - order.created_at).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-sink
+  labels: { app.kubernetes.io/name: order-sink, app.kubernetes.io/part-of: order-pipeline }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: order-sink }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: order-sink, app.kubernetes.io/part-of: order-pipeline }
+    spec:
+      containers:
+        - name: app
+          image: kafka-e2e-demo:0.1.0          # built from lab/app and loaded into kind (README, section 6)
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: ROLE, value: sink }
+            - { name: KAFKA_BOOTSTRAP, value: "my-cluster-kafka-bootstrap.kafka.svc:9092" }
+            - { name: OTEL_SERVICE_NAME, value: order-sink }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://tempo.monitoring.svc:4317" }
+            - { name: PROCESS_MS, value: "10" }
+          ports:
+            - { name: metrics, containerPort: 8000 }
+          resources:
+            requests: { cpu: 25m, memory: 96Mi }
+            limits: { memory: 256Mi }
+---
+# The app team ships its own PodMonitor with its Deployments - observability is part of the app's delivery, not a ticket to the platform team.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: order-pipeline
+  labels: { app.kubernetes.io/part-of: order-pipeline }
+spec:
+  selector:
+    matchLabels: { app.kubernetes.io/part-of: order-pipeline }
+  podMetricsEndpoints:
+    - { port: metrics, path: /metrics }

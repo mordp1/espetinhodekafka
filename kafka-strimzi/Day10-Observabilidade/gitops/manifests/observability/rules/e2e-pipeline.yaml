@@ -1,0 +1,49 @@
+# BUSINESS alerts for the demo pipeline. The infra alerts tell you Kafka is unhealthy; these tell you the PRODUCT is.
+# A pipeline can be broken with every broker green (a stuck consumer, a poison message, a slow downstream).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: e2e-pipeline
+  labels: { role: alert-rules, app: order-pipeline }
+spec:
+  groups:
+    - name: e2e-pipeline-recording
+      interval: 15s
+      rules:
+        # precomputed so dashboards and alerts share ONE definition of "end-to-end latency"
+        - record: demo:end_to_end_latency_seconds:p95
+          expr: histogram_quantile(0.95, sum by (le) (rate(demo_end_to_end_latency_seconds_bucket[2m])))
+        - record: demo:processing_error_ratio:rate2m
+          expr: (sum(rate(demo_processing_errors_total[2m])) or vector(0)) / clamp_min(sum(rate(demo_messages_consumed_total{stage="processor"}[2m])), 0.001)
+    - name: e2e-pipeline
+      rules:
+        - alert: OrderPipelineStalled
+          expr: |
+            sum(rate(demo_messages_produced_total{topic="orders"}[2m])) > 0
+              and
+            sum(rate(demo_messages_consumed_total{stage="sink"}[2m])) == 0
+          for: 1m
+          labels: { severity: critical, team: kafka-platform }
+          annotations:
+            summary: "Orders are being produced but NOTHING reaches the sink"
+            description: "Check consumer-group lag, then the processor/sink pods, then the trace of a recent order in Tempo."
+        - alert: OrderPipelineEndToEndLatencyHigh
+          expr: demo:end_to_end_latency_seconds:p95 > 2
+          for: 2m
+          labels: { severity: warning, team: kafka-platform }
+          annotations:
+            summary: "p95 end-to-end latency is {{ $value | printf \"%.1f\" }}s (SLO: 2s)"
+            description: "Open a slow trace in Tempo: the longest span (or the gap BETWEEN spans = time sitting in a topic) shows where the time goes."
+        - alert: OrderPipelineProcessingErrors
+          expr: demo:processing_error_ratio:rate2m > 0.05
+          for: 2m
+          labels: { severity: warning, team: kafka-platform }
+          annotations:
+            summary: "{{ $value | humanizePercentage }} of orders fail processing"
+        - alert: OrderProducerErrors
+          expr: sum(rate(demo_produce_errors_total[2m])) > 0
+          for: 1m
+          labels: { severity: warning, team: kafka-platform }
+          annotations:
+            summary: "The producer is getting delivery errors from Kafka"
+            description: "Usually NotEnoughReplicas (min.isr) or a leader election in progress - correlate with the broker alerts."

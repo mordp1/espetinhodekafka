@@ -1,0 +1,23 @@
+# The operators are single points of reconciliation: if they are down, NOTHING you apply in Git takes effect.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: strimzi-operators
+  labels: { role: alert-rules, app: strimzi }
+spec:
+  groups:
+    - name: strimzi-operators
+      rules:
+        - alert: StrimziClusterOperatorDown
+          expr: kube_deployment_status_replicas_available{namespace="strimzi-operator", deployment="strimzi-cluster-operator"} < 1
+          for: 2m
+          labels: { severity: critical, team: kafka-platform }
+          annotations:
+            summary: "The Strimzi Cluster Operator has no available replica"
+            description: "Kafka keeps running, but no change (config, scale, cert renewal, rolling update) is applied until it is back."
+        - alert: StrimziEntityOperatorDown
+          expr: kube_deployment_status_replicas_available{namespace="kafka", deployment=~".+-entity-operator"} < 1
+          for: 2m
+          labels: { severity: warning, team: kafka-platform }
+          annotations:
+            summary: "Entity Operator (Topic + User Operator) is down: KafkaTopic/KafkaUser changes are not reconciled"
