@@ -1,5 +1,4 @@
-# PodMonitor = "scrape the pods that match this selector". Prometheus Operator turns each one into scrape_configs.
-# These four cover the Strimzi side. The demo apps ship their OWN PodMonitor next to their Deployments (manifests/demo-apps).
+# Official file: examples/metrics/prometheus-install/pod-monitors/kafka-resources-metrics.yaml (Strimzi 1.1.0). Lab change: namespaceSelector (myproject -> the lab namespaces); selector narrowed to kind=Kafka (the Kafka Exporter pod and the brokers/controllers share it).
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
@@ -22,30 +21,3 @@ spec:
         - { action: replace, sourceLabels: [__meta_kubernetes_pod_name], targetLabel: kubernetes_pod_name }
         - { action: replace, sourceLabels: [__meta_kubernetes_pod_node_name], targetLabel: node_name }
         - { action: replace, sourceLabels: [__meta_kubernetes_pod_host_ip], targetLabel: node_ip }
----
-apiVersion: monitoring.coreos.com/v1
-kind: PodMonitor
-metadata:
-  name: cluster-operator-metrics
-  labels: { app: strimzi }
-spec:
-  selector:
-    matchLabels: { strimzi.io/kind: cluster-operator }
-  namespaceSelector:
-    matchNames: [strimzi-operator]
-  podMetricsEndpoints:
-    - { path: /metrics, port: http }
----
-apiVersion: monitoring.coreos.com/v1
-kind: PodMonitor
-metadata:
-  name: entity-operator-metrics
-  labels: { app: strimzi }
-spec:
-  selector:
-    matchLabels: { app.kubernetes.io/name: entity-operator }
-  namespaceSelector:
-    matchNames: [kafka]
-  podMetricsEndpoints:
-    - { path: /metrics, port: healthcheck-to }    # Topic Operator
-    - { path: /metrics, port: healthcheck-uo }    # User Operator

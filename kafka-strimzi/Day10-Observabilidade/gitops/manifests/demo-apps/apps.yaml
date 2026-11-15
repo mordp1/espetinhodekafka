@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: kafka-e2e-demo:0.1.0          # built from lab/app and loaded into kind (README, section 6)
+          image: kafka-e2e-demo:0.2.0          # built from lab/app and loaded into kind (README, section 6)
           imagePullPolicy: IfNotPresent
           env:
             - { name: ROLE, value: producer }
@@ -22,6 +22,36 @@ spec:
             - { name: OTEL_SERVICE_NAME, value: order-producer }
             - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://tempo.monitoring.svc:4317" }
             - { name: RATE, value: "5" }
+          ports:
+            - { name: metrics, containerPort: 8000 }
+          resources:
+            requests: { cpu: 25m, memory: 96Mi }
+            limits: { memory: 256Mi }
+---
+# The Bridge path: an HTTP-only client producing to Kafka through the Strimzi Kafka Bridge (manifests/kafka/kafka-bridge-metrics.yaml).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-bridge-producer
+  labels: { app.kubernetes.io/name: order-bridge-producer, app.kubernetes.io/part-of: order-pipeline }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: order-bridge-producer }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: order-bridge-producer, app.kubernetes.io/part-of: order-pipeline }
+    spec:
+      containers:
+        - name: app
+          image: kafka-e2e-demo:0.2.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: ROLE, value: bridge-producer }
+            - { name: BRIDGE_URL, value: "http://my-bridge-bridge-service.kafka.svc:8080" }
+            - { name: OTEL_SERVICE_NAME, value: order-bridge-producer }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://tempo.monitoring.svc:4317" }
+            - { name: RATE, value: "1" }
           ports:
             - { name: metrics, containerPort: 8000 }
           resources:
@@ -44,7 +74,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: kafka-e2e-demo:0.1.0          # built from lab/app and loaded into kind (README, section 6)
+          image: kafka-e2e-demo:0.2.0          # built from lab/app and loaded into kind (README, section 6)
           imagePullPolicy: IfNotPresent
           env:
             - { name: ROLE, value: processor }
@@ -75,7 +105,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: kafka-e2e-demo:0.1.0          # built from lab/app and loaded into kind (README, section 6)
+          image: kafka-e2e-demo:0.2.0          # built from lab/app and loaded into kind (README, section 6)
           imagePullPolicy: IfNotPresent
           env:
             - { name: ROLE, value: sink }

@@ -1,0 +1,14 @@
+# Official file: examples/metrics/prometheus-install/pod-monitors/entity-operator-metrics.yaml (Strimzi 1.1.0). Lab change: namespaceSelector (myproject -> the lab namespaces)
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: entity-operator-metrics
+  labels: { app: strimzi }
+spec:
+  selector:
+    matchLabels: { app.kubernetes.io/name: entity-operator }
+  namespaceSelector:
+    matchNames: [kafka]
+  podMetricsEndpoints:
+    - { path: /metrics, port: healthcheck-to }    # Topic Operator
+    - { path: /metrics, port: healthcheck-uo }    # User Operator

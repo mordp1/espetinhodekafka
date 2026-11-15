@@ -29,7 +29,7 @@ spec:
             resources:
               requests: { cpu: 100m, memory: 512Mi }
               limits: { memory: 1Gi }
-        # ---- Alertmanager: routes live in AlertmanagerConfig CRs (see manifests/observability/alertmanagerconfig.yaml)
+        # ---- Alertmanager: routes live in AlertmanagerConfig CRs (see manifests/observability/prometheus-alertmanager-config/alert-manager-config.yaml)
         alertmanager:
           service: { type: NodePort, nodePort: 30093 }
           alertmanagerSpec:

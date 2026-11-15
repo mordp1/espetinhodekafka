@@ -1,0 +1,16 @@
+# Official file name: prometheus-strimzi-entity-operator-rules.yaml (Strimzi 1.1.0 examples/metrics).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels: { role: alert-rules, app: strimzi }
+  name: strimzi-entity-operator
+spec:
+  groups:
+    - name: strimzi-entity-operator
+      rules:
+        - alert: StrimziEntityOperatorDown
+          expr: kube_deployment_status_replicas_available{namespace="kafka", deployment=~".+-entity-operator"} < 1
+          for: 2m
+          labels: { severity: warning, team: kafka-platform }
+          annotations:
+            summary: "Entity Operator (Topic + User Operator) is down: KafkaTopic/KafkaUser changes are not reconciled"
