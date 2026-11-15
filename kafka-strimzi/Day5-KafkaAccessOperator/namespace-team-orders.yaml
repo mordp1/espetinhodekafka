@@ -1,6 +1,7 @@
-# Namespace do time "orders" — separado da namespace "kafka", onde vive o cluster e
-# os KafkaUsers. É essa separação que prova o cross-namespace binding do Access Operator:
-# o time orders nunca precisa de permissão para ler Secrets na namespace "kafka".
+# Namespace for the "orders" team — separate from the "kafka" namespace, where the cluster
+# and the KafkaUsers live. It's this separation that demonstrates the Access Operator's
+# cross-namespace binding: the orders team never needs permission to read Secrets in the
+# "kafka" namespace.
 apiVersion: v1
 kind: Namespace
 metadata:

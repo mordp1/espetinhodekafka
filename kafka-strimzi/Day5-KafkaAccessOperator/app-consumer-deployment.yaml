@@ -1,10 +1,10 @@
-# Segunda aplicação, agora consumindo o binding mTLS (orders-mtls-binding). Prova
-# duas coisas ao mesmo tempo: (1) que o binding mTLS chega pronto pra uso sem PKCS12
-# — Kafka moderno (>= 2.7, KIP-651) lê certificado + chave PEM direto via
-# ssl.keystore.type=PEM; e (2) que a ACL de orders-mtls (Read em orders.* +
-# consumer group orders-consumer-) continua valendo, sem nenhuma configuração extra
-# no Access Operator — ele só entrega a credencial, quem decide o que ela pode
-# fazer continua sendo o StandardAuthorizer do Kafka.
+# Second application, now consuming the mTLS binding (orders-mtls-binding). It proves
+# two things at once: (1) that the mTLS binding arrives ready to use without PKCS12
+# — modern Kafka (>= 2.7, KIP-651) reads the certificate + PEM key directly via
+# ssl.keystore.type=PEM; and (2) that the orders-mtls ACL (Read on orders.* +
+# consumer group orders-consumer-) still applies, with no extra configuration
+# in the Access Operator — it only delivers the credential, while what it's allowed
+# to do is still decided by Kafka's StandardAuthorizer.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,7 +24,7 @@ spec:
       volumes:
         - name: kafka-binding
           secret:
-            # Nome custom, definido em spec.secretName da KafkaAccess orders-mtls-access.
+            # Custom name, defined in spec.secretName of the KafkaAccess orders-mtls-access.
             secretName: orders-mtls-binding
       containers:
         - name: consumer
@@ -35,9 +35,9 @@ spec:
               set -euo pipefail
               BIND=/bindings/kafka
 
-              # ssl.keystore.type=PEM aceita um único arquivo com o bloco CERTIFICATE
-              # e o bloco PRIVATE KEY concatenados — é isso que o parser de PEM do
-              # Kafka (DefaultSslEngineFactory.FileBasedPemStore) espera.
+              # ssl.keystore.type=PEM accepts a single file with the CERTIFICATE block
+              # and the PRIVATE KEY block concatenated — that's what Kafka's PEM parser
+              # (DefaultSslEngineFactory.FileBasedPemStore) expects.
               cat "$BIND/ssl.keystore.crt" "$BIND/ssl.keystore.key" > /tmp/keystore.pem
 
               cat > /tmp/client.properties <<EOF

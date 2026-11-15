@@ -316,4 +316,5 @@ kind delete cluster --name strimzi-day3
 ---
 
 > Parte da série **Espetinho de Kafka** — Strimzi Day 3: Kafka Node Pools Avançado.
-> Próximo Day: autenticação e autorização (SCRAM/TLS + ACLs) com `KafkaUser`.
+> Próximo Day: [Autenticação e Autorização](../Day4-Autenticacao-Autorizacao/) — mTLS,
+> SCRAM-SHA-512 e ACLs multi-tenant com `KafkaUser`.

@@ -5,8 +5,8 @@ metadata:
   labels:
     strimzi.io/cluster: my-cluster
 spec:
-  # Sem .spec.authorization: o principal "CN=admin" já está em
-  # Kafka.spec.kafka.authorization.superUsers, então o authorizer nem
-  # avalia ACLs para ele — acesso total por definição.
+  # No .spec.authorization: the "CN=admin" principal is already listed in
+  # Kafka.spec.kafka.authorization.superUsers, so the authorizer doesn't even
+  # evaluate ACLs for it — full access by definition.
   authentication:
     type: tls

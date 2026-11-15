@@ -6,7 +6,7 @@ spec:
   kafka:
     version: 4.3.0
     metadataVersion: 4.3-IV0
-    # Sem listener "plain": em produção, todo listener client-facing exige TLS + autenticação.
+    # No "plain" listener: in production, every client-facing listener requires TLS + authentication.
     listeners:
       - name: tls
         port: 9093
@@ -20,8 +20,8 @@ spec:
         tls: true
         authentication:
           type: scram-sha-512
-    # type: simple resolve, em cluster KRaft, para o StandardAuthorizer nativo do Kafka
-    # (org.apache.kafka.metadata.authorizer.StandardAuthorizer) — sem Zookeeper, sem AclAuthorizer legado.
+    # type: simple resolves, in a KRaft cluster, to Kafka's native StandardAuthorizer
+    # (org.apache.kafka.metadata.authorizer.StandardAuthorizer) — no Zookeeper, no legacy AclAuthorizer.
     authorization:
       type: simple
       superUsers:

@@ -1,15 +1,15 @@
-# Segunda KafkaAccess na mesma namespace team-orders, agora para o usuário mTLS
-# orders-mtls. Aqui o listener é explícito (tls) — não é obrigatório (o operator
-# também acertaria sozinho, já que só o listener "tls" aceita autenticação tls),
-# mas deixamos explícito para o exemplo de erro da seção 13 fazer sentido por
-# comparação.
+# Second KafkaAccess in the same team-orders namespace, now for the mTLS user
+# orders-mtls. Here the listener is explicit (tls) — it isn't required (the operator
+# would also figure it out on its own, since only the "tls" listener accepts tls
+# authentication), but we leave it explicit so the error example in section 13 makes
+# sense by comparison.
 #
-# secretName customiza o nome do Secret gerado (por padrão seria igual ao nome do
-# KafkaAccess, "orders-mtls-access"). template.secret.metadata permite anotar/rotular
-# o Secret gerado — aqui usamos isso pra marcar o Secret para o Stakater Reloader
-# (reloader.stakater.com/match: "true"), que reinicia automaticamente qualquer
-# Deployment com a anotação equivalente quando o conteúdo do Secret mudar — o que
-# fecha o ciclo de rotação de credencial sem intervenção humana (seção 14).
+# secretName customizes the name of the generated Secret (by default it would match
+# the KafkaAccess name, "orders-mtls-access"). template.secret.metadata lets you
+# annotate/label the generated Secret — here we use it to mark the Secret for the
+# Stakater Reloader (reloader.stakater.com/match: "true"), which automatically restarts
+# any Deployment with the matching annotation when the Secret's content changes — which
+# closes the credential rotation cycle with no human intervention (section 14).
 apiVersion: access.strimzi.io/v1alpha1
 kind: KafkaAccess
 metadata:

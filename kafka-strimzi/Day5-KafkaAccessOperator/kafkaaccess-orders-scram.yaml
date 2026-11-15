@@ -1,12 +1,12 @@
-# KafkaAccess vive na namespace do time (team-orders), mas aponta pra um Kafka e um
-# KafkaUser que vivem na namespace "kafka" — daí os campos kafka.namespace / user.namespace.
-# Sem eles, o operator assumiria a própria namespace do KafkaAccess (team-orders), e não
-# encontraria nem o Kafka nem o KafkaUser lá.
+# The KafkaAccess lives in the team's namespace (team-orders), but points to a Kafka
+# and a KafkaUser that live in the "kafka" namespace — hence the kafka.namespace / user.namespace
+# fields. Without them, the operator would assume the KafkaAccess's own namespace
+# (team-orders), and would find neither the Kafka nor the KafkaUser there.
 #
-# spec.kafka.listener não é especificado de propósito: com um único KafkaUser SCRAM
-# referenciado, o operator filtra os listeners do Kafka CR pelos que têm authentication
-# compatível com scram-sha-512 — nesse cluster só o listener "scram" bate, então ele é
-# escolhido automaticamente (regra 2 da seleção automática de listener).
+# spec.kafka.listener is left unspecified on purpose: with a single SCRAM KafkaUser
+# referenced, the operator filters the Kafka CR's listeners for the ones whose authentication
+# is compatible with scram-sha-512 — in this cluster only the "scram" listener matches, so
+# it's chosen automatically (rule 2 of automatic listener selection).
 apiVersion: access.strimzi.io/v1alpha1
 kind: KafkaAccess
 metadata:

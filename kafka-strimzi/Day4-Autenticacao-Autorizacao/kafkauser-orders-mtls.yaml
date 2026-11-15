@@ -6,7 +6,7 @@ metadata:
     strimzi.io/cluster: my-cluster
 spec:
   authentication:
-    type: tls            # mesmo mecanismo do admin, mas sem entrar em spec.kafka.authorization.superUsers
+    type: tls            # same mechanism as admin, but without being listed in spec.kafka.authorization.superUsers
   authorization:
     type: simple
     acls:

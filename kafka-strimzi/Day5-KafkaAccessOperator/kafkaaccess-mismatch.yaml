@@ -1,11 +1,11 @@
-# Exemplo NEGATIVO, de propósito: aponta pro listener "tls" (mTLS) mas referencia o
-# KafkaUser producer-orders, que é scram-sha-512. O KafkaParser do Access Operator
-# valida a compatibilidade entre authentication do listener e authentication do
-# KafkaUser antes de gerar o Secret — aqui ela falha, e o CR fica preso em
-# Ready=False com a mensagem:
+# NEGATIVE example, on purpose: it points to the "tls" listener (mTLS) but references
+# the KafkaUser producer-orders, which is scram-sha-512. The Access Operator's KafkaParser
+# validates compatibility between the listener's authentication and the KafkaUser's
+# authentication before generating the Secret — here it fails, and the CR gets stuck at
+# Ready=False with the message:
 #   "Provided listener tls and Kafka User do not have compatible authentication
 #    configurations."
-# Nenhum Secret é criado. Ver seção 13 do README para o passo a passo do diagnóstico.
+# No Secret is created. See section 13 of the README for the diagnosis walkthrough.
 apiVersion: access.strimzi.io/v1alpha1
 kind: KafkaAccess
 metadata:

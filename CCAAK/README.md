@@ -218,7 +218,7 @@ kafka-reassign-partitions.sh
 kafka-acls.sh --add/list/remove
 
 # Connect
-curl endpoints para status/config/logs
+    curl endpoints para status/config/logs
 ``` 
 
 ## Configurações Críticas:

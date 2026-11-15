@@ -24,12 +24,12 @@ spec:
   entityOperator:
     topicOperator: {}
     userOperator: {}
-  # Habilita o Cruise Control gerenciado nativamente pelo Strimzi: o operator sobe o
-  # deployment do Cruise Control, injeta o Metrics Reporter nos brokers e cria os tópicos
-  # internos que ele usa para guardar amostras de métricas e o modelo de carga do cluster.
-  # Este Day não gera carga nem executa nenhum KafkaRebalance — é só a introdução. Capacity
-  # planning (brokerCapacity) e self-healing completo entram no Day 7, quando o cluster
-  # passa a ter tráfego de verdade pra otimizar.
+  # Enables Cruise Control, natively managed by Strimzi: the operator brings up the
+  # Cruise Control deployment, injects the Metrics Reporter into the brokers, and creates
+  # the internal topics it uses to store metric samples and the cluster's load model.
+  # This Day doesn't generate load or run any KafkaRebalance — it's just the introduction.
+  # Capacity planning (brokerCapacity) and full self-healing come in Day 7, once the cluster
+  # has real traffic to optimize.
   cruiseControl:
     config:
       self.healing.broker.failure.enabled: "true"

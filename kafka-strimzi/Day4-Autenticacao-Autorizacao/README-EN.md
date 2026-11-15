@@ -574,5 +574,5 @@ rm -rf /tmp/day4-certs
 ---
 
 > Part of the **Espetinho de Kafka** series — Strimzi Day 4: Authentication and Authorization.
-> Next Day: [Cruise Control](../Day5-CruiseControl/) — automatic rebalancing and self-healing
-> of partitions across brokers.
+> Next Day: [Kafka Access Operator](../Day5-KafkaAccessOperator/) — decoupling application
+> credentials from cluster access provisioning.

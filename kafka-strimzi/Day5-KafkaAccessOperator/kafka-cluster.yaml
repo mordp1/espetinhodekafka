@@ -6,9 +6,9 @@ spec:
   kafka:
     version: 4.3.0
     metadataVersion: 4.3-IV0
-    # Mesma base do Day 4: dois listeners TLS, um mTLS (tls) e um SASL (scram),
-    # nenhum listener sem criptografia. O Access Operator não muda nada aqui —
-    # ele só lê o que já existe em spec.kafka.listeners e em status.listeners.
+    # Same base as Day 4: two TLS listeners, one mTLS (tls) and one SASL (scram),
+    # no unencrypted listener. The Access Operator doesn't change anything here —
+    # it only reads what already exists in spec.kafka.listeners and status.listeners.
     listeners:
       - name: tls
         port: 9093
