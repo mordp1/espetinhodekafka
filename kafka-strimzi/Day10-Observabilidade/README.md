@@ -91,6 +91,7 @@ O dashboard e os alertas deste Day são organizados exatamente pelas três pergu
 | Strimzi Cluster Operator | 1.1.0 | chart oficial (`strimzi.io/charts`) |
 | Kafka | 4.3.0 (KRaft, 3 nós dual-role) | CRs `Kafka` + `KafkaNodePool` |
 | Kafka Bridge | `kafka-bridge:1.0.0` (a imagem do Strimzi 1.1.0) | CR `KafkaBridge` |
+| Kafbat UI | `ghcr.io/kafbat/kafka-ui:v1.5.0` | `Deployment` em `manifests/kafka/kafbat-ui.yaml` |
 | kube-prometheus-stack | 93.3.0 (Prometheus 3.16.0, Prometheus Operator 0.95.2) | chart `prometheus-community` |
 | Grafana | a do chart acima | dashboards/datasources via sidecar (label) |
 | Tempo | 2.9.0 (single-binary, chart `grafana/tempo` 1.24.4) | chart `grafana` |
@@ -105,6 +106,7 @@ Endereços (via `extraPortMappings` do kind — sem `port-forward`):
 | Grafana | <http://localhost:3000> | `admin` / `admin` (**só lab**) |
 | Prometheus | <http://localhost:9090> | — |
 | Alertmanager | <http://localhost:9093> | — |
+| Kafbat UI (tópicos e mensagens) | <http://localhost:8088> | sem login (**só lab**) |
 | ArgoCD (opcional) | <https://localhost:8080> via `port-forward` (seção 7.3) | `admin` / `argocd-initial-admin-secret` |
 
 ## 3. De onde vêm as métricas do Strimzi
@@ -292,7 +294,7 @@ Day10-Observabilidade/
     ├── bootstrap/              # appproject.yaml + root-app.yaml  (o ÚNICO kubectl apply manual)
     ├── apps/                   # 6 Applications (uma por arquivo, com sync-wave)
     ├── manifests/
-    │   ├── kafka/              # kafka-metrics.yaml (Kafka+NodePool), kafka-bridge-metrics.yaml (KafkaBridge), topics.yaml
+    │   ├── kafka/              # kafka-metrics.yaml (Kafka+NodePool), kafka-bridge-metrics.yaml, kafbat-ui.yaml, topics.yaml
     │   ├── observability/      # <<< MESMO layout do examples/metrics oficial do Strimzi (seção 4.0)
     │   │   ├── prometheus-install/{pod-monitors,prometheus-rules}/
     │   │   ├── kube-state-metrics/        # configmap.yaml, ksm.yaml, prometheus-rules.yaml
@@ -422,6 +424,7 @@ my-cluster-dual-role-2                       1/1   Running strimzi-day10-worker
 my-cluster-entity-operator-66d6858cdc-9thfn  2/2   Running strimzi-day10-worker2
 my-cluster-kafka-exporter-674c8dfc8b-j8nq8   1/1   Running strimzi-day10-worker3
 my-bridge-bridge-7d465464ff-l4x9w            1/1   Running strimzi-day10-worker
+kafbat-ui-7d68588654-xnmmn                   1/1   Running strimzi-day10-worker
 ```
 
 > O `order-producer` pode reiniciar **uma vez** nos primeiros minutos (`RESTARTS 1`): ele sobe
@@ -515,6 +518,30 @@ kx -n monitoring logs deploy/alert-webhook -f
 > Em produção a rota aponta para Slack/PagerDuty (exemplos comentados em
 > `alert-manager-config.yaml`; o *secret* fica num `Secret`, nunca no Git).
 
+### 8.4 Kafbat UI (<http://localhost:8088>): tópicos e mensagens
+
+Dashboards mostram **números**; para **ver o conteúdo** — "o pedido `X` chegou ao tópico?", "qual o formato da
+mensagem?" — o lab traz o **Kafbat UI** (o fork comunitário do antigo *UI for Apache Kafka*; é o mesmo do `kafka-ui.yaml`
+do Day 7, agora **versionado e com imagem fixada** `v1.5.0`). Ele é um `Deployment` em
+`gitops/manifests/kafka/kafbat-ui.yaml`, ligado ao listener `plain` do `my-cluster`, e o `kind` mapeia o NodePort 30080 para o
+host. Sem login (só lab).
+
+| Aba | O que ver no lab |
+|---|---|
+| **Brokers** | os 3 nós, partições líderes e réplicas |
+| **Topics** | `orders` e `orders.processed` (6 partições, RF 3); abra um tópico → **Messages**: as mensagens chegando (offset, partição, chave, valor JSON), com busca e filtro |
+| **Consumers** | `order-processor` e `order-sink`: membros, estado e a coluna **Consumer Lag** — compare com o painel de lag do Grafana (é a mesma informação, vista de outro ângulo) |
+| botão **Produce Message** (dentro do tópico) | publica uma mensagem à mão (útil para testar um consumidor) |
+
+Conferido no lab (API e navegador): o cluster aparece `ONLINE` com 3 brokers, os dois tópicos listam as
+mensagens recentes (com chave `c1`..`c20` e o JSON do pedido), e `Consumers` lista os dois grupos com o lag.
+Publicar pela API do UI (`POST /api/clusters/my-cluster/topics/orders/messages`) retornou `200`.
+
+> **Quando usar o quê:** Grafana/Prometheus respondem *"está bom? está piorando?"*; o Kafbat UI responde *"o que
+> exatamente está lá dentro?"*; o Tempo responde *"por onde passou **esta** mensagem?"*. Em produção, ponha o UI atrás de
+> SSO e use um `KafkaUser` **somente-leitura** (Day 4); com SCRAM/TLS ele precisa das propriedades `SASL`/`SSL` do cluster
+> (veja `Examples/kafka-ui.yaml`) — **não testado aqui**, o lab usa o listener sem autenticação.
+
 ## 9. Cenários na prática
 
 Os cenários A, C, D e E mexem no **Git**, não no cluster: é a metodologia. **No terminal 2**, deixe
@@ -525,10 +552,14 @@ o Git local acessível (é por aqui que o seu `git push` chega ao servidor dentr
 kubectl --context kind-strimzi-day10 -n git port-forward svc/git-server 18080:80
 ```
 
-No terminal principal, entre no clone de trabalho e defina um atalho para o `git` com identidade de lab:
+No terminal principal, entre no clone de trabalho e defina um atalho para o `git` com identidade de lab.
+Os comandos abaixo **não dependem da pasta em que você está** (só de estar dentro do repositório) e avisam se o clone
+de trabalho ainda não existe — ele é criado pelo `lab/push-repo.sh` (seção 7.3):
 
 ```bash
-cd lab/work/observability
+D10="$(git rev-parse --show-toplevel)/kafka-strimzi/Day10-Observabilidade"   # raiz do Day 10, de qualquer pasta do repo
+kx() { kubectl --context kind-strimzi-day10 "$@"; }                           # (necessário se este é um terminal novo)
+cd "$D10/lab/work/observability" || echo ">> lab/work/observability não existe: rode $D10/lab/push-repo.sh (seção 7.3)"
 lg() { git -c user.name=lab -c user.email=lab@example.com "$@"; }
 ```
 
@@ -592,7 +623,7 @@ cordone o nó do broker 1 (os volumes `local-path` ficam presos ao nó, então o
 para outro lugar) e apague o pod. Graças ao `podAntiAffinity`, esse nó só tem **esse** broker:
 
 ```bash
-cd ../../..        # volta para Day10-Observabilidade
+cd "$D10"        # volta para Day10-Observabilidade
 NODE=$(kx -n kafka get pod my-cluster-dual-role-1 -o jsonpath='{.spec.nodeName}'); echo "NODE=$NODE"
 kx cordon $NODE
 kx -n kafka delete pod my-cluster-dual-role-1 --wait=false
@@ -637,7 +668,7 @@ kx -n kafka wait pod/my-cluster-dual-role-1 --for=condition=Ready --timeout=300s
 Um PR "inocente" cria um tópico com `replicas: 5` num cluster de 3 brokers:
 
 ```bash
-cd lab/work/observability
+cd "$D10/lab/work/observability"
 cat >> manifests/kafka/topics.yaml <<'EOF'
 ---
 apiVersion: kafka.strimzi.io/v1
@@ -717,7 +748,7 @@ A regra de ouro: **toda vez que criar ou mexer num alerta, escreva/atualize um t
 que o CI pega, localmente (a partir de `Day10-Observabilidade/gitops`):
 
 ```bash
-cd ../../../gitops && ci/validate.sh
+cd "$D10/gitops" && ci/validate.sh
 ```
 
 ```text
@@ -953,7 +984,7 @@ Duração-alvo: **~25 min**. O fio condutor são as três perguntas da seção 1
 | 1:30 | As 3 perguntas | Seção 1; a arquitetura (seção 2) |
 | 3:30 | De onde vêm as métricas | Tabela da seção 3: **6 fontes**, por que o Kafka Exporter e o KSM dos CRs existem |
 | 6:00 | GitOps ao vivo | `kx -n argocd get applications`; abrir `apps/` e `manifests/observability/`; "nenhum arquivo do Prometheus foi editado" |
-| 8:30 | Tour do Grafana | O dashboard end-to-end de cima para baixo; depois *Strimzi Kafka* |
+| 8:30 | Tour do Grafana + Kafbat UI | O dashboard end-to-end de cima para baixo; depois *Strimzi Kafka*; e o **Kafbat UI** para ver as mensagens e o lag dos grupos |
 | 11:00 | **Cenário A** | Commit que deixa o processor lento → lag, latência, alerta no webhook → `git revert` → `RESOLVED` |
 | 15:00 | **Cenário C** | PR com `replicas: 5` → ArgoCD "Synced" mas tópico `Ready=False` → alerta do KSM. "Git ok ≠ Kafka ok" |
 | 18:00 | **Tracing** | Abrir o trace de um pedido: 3 serviços, 2 tópicos; a lacuna = tempo no tópico; mostrar `process_span` e o header `traceparent` |
@@ -974,5 +1005,6 @@ Duração-alvo: **~25 min**. O fio condutor são as três perguntas da seção 1
 - [Grafana Tempo](https://grafana.com/docs/tempo/latest/) e [TraceQL](https://grafana.com/docs/tempo/latest/traceql/)
 - [OpenTelemetry — convenções semânticas de mensageria](https://opentelemetry.io/docs/specs/semconv/messaging/) e [propagação de contexto (W3C Trace Context)](https://www.w3.org/TR/trace-context/)
 - [Argo CD — App of Apps e Sync Waves](https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/)
+- [Kafbat UI](https://github.com/kafbat/kafka-ui) — a UI de tópicos e mensagens (fork do *UI for Apache Kafka*)
 - Strimzi — [Kafka Bridge](https://strimzi.io/docs/operators/latest/deploying) (capítulo *Deploying Kafka Bridge*) e o [projeto Strimzi Kafka Bridge](https://github.com/strimzi/strimzi-kafka-bridge)
 - [Day 8 — Topic e User Operator](../Day8-TopicUserOperators/) e [Day 9 — GitOps multi-time](../Day9-GitOps-MultiTime/) (o servidor Git de lab e o `selfHeal` vêm de lá)
