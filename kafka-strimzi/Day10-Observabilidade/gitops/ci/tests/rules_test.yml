@@ -141,21 +141,3 @@ tests:
           - exp_labels: { severity: warning, team: kafka-platform, name: orders.audit, topicName: orders.audit, ready: "False" }
             exp_annotations:
               message: "Strimzi KafkaTopic orders.audit is not ready"
-
-  # ------------------------------------------------------------------------------------------------ Kafka Bridge
-  - name: a burst of HTTP 4xx from the Bridge alerts, and resolves once the burst is over (increase(), not the raw counter)
-    interval: 15s
-    input_series:
-      - series: 'strimzi_bridge_http_server_requests_total{code="415", path="/topics/orders"}'
-        values: '0+2x20 40x40'                   # 2 errors per 15 s for 5 min (= 40), then it STOPS
-    alert_rule_test:
-      - eval_time: 4m
-        alertname: Http4xxErrorRate
-        exp_alerts:
-          - exp_labels: { severity: warning, team: kafka-platform, code: "415", path: "/topics/orders" }
-            exp_annotations:
-              summary: "Kafka Bridge returned 32 HTTP 415 in 5 min for /topics/orders"
-              description: "Client errors: wrong Content-Type, unknown topic/consumer, bad payload. Usually a client bug, not a Kafka problem."
-      - eval_time: 14m                           # counter is still 40 (> 10) but nothing new happened: must NOT fire
-        alertname: Http4xxErrorRate
-        exp_alerts: []
