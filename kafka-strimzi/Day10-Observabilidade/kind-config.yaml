@@ -8,6 +8,7 @@ nodes:
       - { containerPort: 30300, hostPort: 3000, listenAddress: "127.0.0.1" }   # Grafana
       - { containerPort: 30090, hostPort: 9090, listenAddress: "127.0.0.1" }   # Prometheus
       - { containerPort: 30093, hostPort: 9093, listenAddress: "127.0.0.1" }   # Alertmanager
+      - { containerPort: 30080, hostPort: 8088, listenAddress: "127.0.0.1" }   # Kafbat UI (topics and messages)
   - role: worker
   - role: worker
   - role: worker      # 3 workers + required pod anti-affinity = exactly ONE broker per node (the broker-down scenario relies on it)

@@ -8,12 +8,10 @@ resources:
   - prometheus-install/pod-monitors/cluster-operator-metrics.yaml
   - prometheus-install/pod-monitors/entity-operator-metrics.yaml
   - prometheus-install/pod-monitors/kafka-resources-metrics.yaml
-  - prometheus-install/pod-monitors/bridge-metrics.yaml
   - prometheus-install/prometheus-rules/prometheus-kafka-rules.yaml
   - prometheus-install/prometheus-rules/prometheus-kafka-exporter-topic-rules-group.yaml
   - prometheus-install/prometheus-rules/prometheus-strimzi-cluster-operator-rules.yaml
   - prometheus-install/prometheus-rules/prometheus-strimzi-entity-operator-rules.yaml
-  - prometheus-install/prometheus-rules/prometheus-kafka-bridge-rules.yaml
   - prometheus-install/prometheus-rules/prometheus-kafka-certificate-rules.yaml
   - kube-state-metrics/configmap.yaml
   - kube-state-metrics/ksm.yaml
@@ -42,9 +40,6 @@ configMapGenerator:
     options: { annotations: { grafana_folder: Strimzi } }
   - name: dashboard-strimzi-operators
     files: [grafana-dashboards/strimzi-operators.json]
-    options: { annotations: { grafana_folder: Strimzi } }
-  - name: dashboard-strimzi-kafka-bridge
-    files: [grafana-dashboards/strimzi-kafka-bridge.json]
     options: { annotations: { grafana_folder: Strimzi } }
   - name: dashboard-e2e-pipeline
     files: [grafana-dashboards/e2e-pipeline.json]

@@ -1,0 +1,43 @@
+# Kafbat UI (the community fork of "UI for Apache Kafka", formerly provectus/kafka-ui): browse topics, read/produce messages,
+# see brokers, consumer groups and lag, ACLs and configs. Same tool as Day 7's kafka-ui.yaml, but pinned and GitOps-managed.
+# LAB: no login and a plaintext listener. Production: put it behind SSO (Kafbat supports OAuth2/LDAP) and give it a read-only KafkaUser.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafbat-ui
+  labels: { app: kafbat-ui }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: kafbat-ui }
+  template:
+    metadata:
+      labels: { app: kafbat-ui }
+    spec:
+      containers:
+        - name: kafbat-ui
+          image: ghcr.io/kafbat/kafka-ui:v1.5.0
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            - { name: KAFKA_CLUSTERS_0_NAME, value: my-cluster }
+            - { name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS, value: "my-cluster-kafka-bootstrap:9092" }   # the lab's plain listener
+            - { name: DYNAMIC_CONFIG_ENABLED, value: "false" }      # the cluster list comes from Git, not from clicks in the UI
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 384Mi }
+            limits: { memory: 768Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafbat-ui
+  labels: { app: kafbat-ui }
+spec:
+  type: NodePort                       # kind maps 30080 -> http://localhost:8088 (kind-config.yaml)
+  selector: { app: kafbat-ui }
+  ports:
+    - { name: http, port: 8080, targetPort: 8080, nodePort: 30080 }
