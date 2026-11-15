@@ -17,10 +17,10 @@ spec:
       releaseName: tempo
       valuesObject:
         tempo:
-          retention: 24h
+          retention: 6h                   # LAB: the lab emits ~5 traces/s non-stop; short retention keeps Tempo's memory bounded
           resources:
-            requests: { cpu: 50m, memory: 256Mi }
-            limits: { memory: 768Mi }
+            requests: { cpu: 50m, memory: 384Mi }
+            limits: { memory: 1536Mi }    # 768Mi was OOMKilled after ~5h of continuous traffic (5 restarts in 25h)
         persistence: { enabled: false }
   destination:
     server: https://kubernetes.default.svc

@@ -1,8 +1,8 @@
 # Who must approve what (needs "Require review from Code Owners" in branch protection - see README, section 4.4).
 # The point: the people who get PAGED own the alerts; the app team owns its own pipeline; nobody edits Prometheus by hand.
-*                                             @acme-corp/kafka-platform
-/manifests/observability/rules/               @acme-corp/kafka-platform @acme-corp/sre
-/manifests/observability/alertmanagerconfig.yaml  @acme-corp/sre
-/manifests/observability/dashboards/          @acme-corp/kafka-platform
-/manifests/demo-apps/                         @acme-corp/orders-team
-/manifests/observability/rules/e2e-pipeline.yaml  @acme-corp/orders-team @acme-corp/kafka-platform
+*                                                                               @acme-corp/kafka-platform
+/manifests/observability/prometheus-install/prometheus-rules/                   @acme-corp/kafka-platform @acme-corp/sre
+/manifests/observability/prometheus-alertmanager-config/                        @acme-corp/sre
+/manifests/observability/grafana-dashboards/                                    @acme-corp/kafka-platform
+/manifests/demo-apps/                                                           @acme-corp/orders-team
+/manifests/observability/prometheus-install/prometheus-rules/prometheus-e2e-pipeline-rules.yaml  @acme-corp/orders-team @acme-corp/kafka-platform

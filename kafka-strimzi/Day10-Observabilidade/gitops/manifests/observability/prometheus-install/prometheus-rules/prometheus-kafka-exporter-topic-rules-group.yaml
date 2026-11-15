@@ -1,12 +1,13 @@
+# Official file: examples/metrics/prometheus-install/prometheus-rules/prometheus-kafka-exporter-topic-rules-group.yaml (Strimzi 1.1.0), adapted.
 # Alerts based on the Kafka Exporter (consumer-group lag and topic offsets). Adapted from the official Strimzi examples.
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: kafka-exporter
+  name: kafka-exporter-topic
   labels: { role: alert-rules, app: strimzi }
 spec:
   groups:
-    - name: kafka-exporter
+    - name: kafka-exporter-topic
       rules:
         - alert: KafkaConsumerGroupLagHigh
           # lag is per partition; sum it per group+topic so ONE alert fires per consumer, not one per partition

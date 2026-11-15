@@ -1,3 +1,4 @@
+# NOT an official Strimzi file: business alerts for the lab pipeline (kept in the same folder so Prometheus loads it like the others).
 # BUSINESS alerts for the demo pipeline. The infra alerts tell you Kafka is unhealthy; these tell you the PRODUCT is.
 # A pipeline can be broken with every broker green (a stuck consumer, a poison message, a slow downstream).
 apiVersion: monitoring.coreos.com/v1

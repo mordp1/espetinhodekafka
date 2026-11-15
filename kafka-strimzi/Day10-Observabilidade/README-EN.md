@@ -89,12 +89,13 @@ The dashboard and the alerts in this Day are organized by exactly those three qu
 |---|---|---|
 | Strimzi Cluster Operator | 1.1.0 | official chart (`strimzi.io/charts`) |
 | Kafka | 4.3.0 (KRaft, 3 dual-role nodes) | `Kafka` + `KafkaNodePool` CRs |
+| Kafka Bridge | `kafka-bridge:1.0.0` (the Strimzi 1.1.0 image) | `KafkaBridge` CR |
 | kube-prometheus-stack | 93.3.0 (Prometheus 3.16.0, Prometheus Operator 0.95.2) | `prometheus-community` chart |
 | Grafana | the one in the chart above | dashboards/datasources via sidecar (label) |
 | Tempo | 2.9.0 (single-binary, `grafana/tempo` chart 1.24.4) | `grafana` chart |
 | kube-state-metrics for CRs | v2.16.0 | official Strimzi manifests (`examples/metrics/kube-state-metrics`) |
 | ArgoCD | 3.4.6 | official manifest |
-| Sample app | Python 3.12, `confluent-kafka` 2.16.1, OpenTelemetry SDK 1.45.2 | `lab/app/` (local image on kind) |
+| Sample app (4 roles: producer, bridge-producer, processor, sink) | Python 3.12, `confluent-kafka` 2.16.1, OpenTelemetry SDK 1.45.2 | `lab/app/` (local image on kind) |
 
 Addresses (via kind `extraPortMappings` — no `port-forward` needed):
 
@@ -125,7 +126,7 @@ with `jmxPrometheusExporter` — a Java agent that reads MBeans over JMX and tra
 JVM as Kafka's own *metrics reporter* and needs no `ConfigMap`:
 
 ```yaml
-# gitops/manifests/kafka/kafka.yaml
+# gitops/manifests/kafka/kafka-metrics.yaml
 spec:
   kafka:
     metricsConfig:
@@ -149,6 +150,38 @@ dashboards used here are the **Metrics Reporter variants**
 
 ## 4. The GitOps methodology
 
+### 4.0 The Strimzi standard: the `examples/metrics` layout
+
+With every release, Strimzi ships an `examples/metrics/` folder with **ready-made files** for metrics (the
+*Example metrics files* section of the documentation: Metrics Reporter / JMX Exporter configuration, alert
+rules, Grafana dashboards, kube-state-metrics). The lab **follows that layout and those names** (files,
+folders, `PrometheusRule`s, the `app: strimzi` / `role: alert-rules` labels) — anyone who knows the docs finds
+everything in the same place. The table maps them (official files from **1.1.0**) and what changed:
+
+| Official (`examples/metrics/...`) | In the lab (`gitops/manifests/...`) | Difference |
+|---|---|---|
+| `strimzi-metrics-reporter/kafka-metrics.yaml` | `kafka/kafka-metrics.yaml` | 3 dual-role nodes instead of separate pools; `podAntiAffinity`; `kafkaExporter` kept |
+| `strimzi-metrics-reporter/kafka-bridge-metrics.yaml` | `kafka/kafka-bridge-metrics.yaml` | + `tracing: opentelemetry` and `OTEL_*` env |
+| `prometheus-install/pod-monitors/{cluster-operator,entity-operator,kafka-resources,bridge}-metrics.yaml` | `observability/prometheus-install/pod-monitors/` (same 4 names) | `namespaceSelector` points at the lab namespaces (`myproject` → `kafka`, `strimzi-operator`) |
+| `prometheus-install/prometheus-rules/prometheus-{kafka,kafka-exporter-topic-rules-group,strimzi-cluster-operator,strimzi-entity-operator,kafka-bridge,kafka-certificate}-rules.yaml` | same folder, same file and `PrometheusRule` names | `team: kafka-platform` label (routing), shorter `for`, and **kube-state-metrics signals** instead of `container_last_seen`/the `.+-kafka-N` regex (which do not match node-pool pod names); details in each file header |
+| `kube-state-metrics/{configmap,ksm,prometheus-rules}.yaml` | `observability/kube-state-metrics/` | only the `ClusterRoleBinding` `namespace` (pitfall 3) and `for: 1m` |
+| `strimzi-metrics-reporter/grafana-dashboards/*.json` | `observability/grafana-dashboards/` | identical; + the lab's `e2e-pipeline.json` dashboard |
+| `prometheus-install/prometheus.yaml`, `alert-manager.yaml`, `prometheus-additional-properties/`, `grafana-install/grafana.yaml` | **replaced by `kube-prometheus-stack`** (`apps/10-kube-prometheus-stack.yaml`) | lab decision, explained below |
+| `prometheus-alertmanager-config/alert-manager-config.yaml` (a Secret with `alertmanager.yaml`) | `observability/prometheus-alertmanager-config/alert-manager-config.yaml` (an `AlertmanagerConfig`) | a CR instead of a Secret: each team versions its own routes |
+
+**Why `kube-prometheus-stack` instead of the hand-assembled Prometheus of the examples.** The docs flow is to
+install the Prometheus Operator and apply `prometheus.yaml` + `prometheus-additional.yaml` (a Secret with
+extra scrape configs for cAdvisor/kubelet). The chart already brings the Prometheus Operator, Alertmanager,
+Grafana, the **native kube-state-metrics** (which the Strimzi example does not include: its KSM is for CRs only),
+cAdvisor and the Kubernetes dashboards — and it is what most real clusters already have. The official
+`PodMonitor`/`PrometheusRule`/dashboards **work unchanged in format** on any Prometheus Operator, so the choice of
+"engine" does not change the files' pattern. If you want the 100% by-the-docs path, apply the release's
+`prometheus-install/` and `grafana-install/` instead of the chart.
+
+> **Source:** the documentation page (`deploying`, metrics chapter) came back **truncated** in the tools used
+> here — only the table of contents (*25.1 Example metrics files ... 25.6 Cruise Control operations monitoring*) was
+> read. The layout and file contents above come **straight from the 1.1.0 release examples** on GitHub.
+
 ### 4.1 App of apps with sync waves
 
 A single manual `kubectl apply` (`bootstrap/root-app.yaml`). From there on, the cluster is whatever
@@ -159,9 +192,9 @@ Git says it is. `observability-root` watches the `apps/` folder and creates one 
 | 0 | `strimzi-operator` | Cluster Operator + CRDs | official chart 1.1.0 |
 | 0 | `kube-prometheus-stack` | Prometheus Operator, Prometheus, Alertmanager, Grafana, KSM, CRDs | `prometheus-community` chart |
 | 1 | `tempo` | trace backend | `grafana/tempo` chart |
-| 1 | `kafka` | `Kafka`, `KafkaNodePool`, `KafkaTopic` | `manifests/kafka/` |
+| 1 | `kafka` | `Kafka`, `KafkaNodePool`, `KafkaTopic`, **`KafkaBridge`** | `manifests/kafka/` |
 | 2 | `observability` | PodMonitors, PrometheusRules, AlertmanagerConfig, dashboards, datasource, KSM for CRs, lab webhook | `manifests/observability/` |
-| 3 | `demo-apps` | producer, processor, sink + their `PodMonitor` | `manifests/demo-apps/` |
+| 3 | `demo-apps` | producer, **bridge-producer (HTTP)**, processor, sink + their `PodMonitor` | `manifests/demo-apps/` |
 
 Waves solve "the CR arrived before the CRD". Since ArgoCD does not wait for a CRD to appear within a
 single Application, each child has a `retry` with backoff and `SkipDryRunOnMissingResource=true` —
@@ -196,8 +229,8 @@ PR (alert, dashboard, threshold, app)
 The repo's `.github/CODEOWNERS` expresses the rule "whoever is paged by the alert owns the alert":
 
 ```text
-/manifests/observability/rules/                   @acme-corp/kafka-platform @acme-corp/sre
-/manifests/observability/alertmanagerconfig.yaml  @acme-corp/sre
+/manifests/observability/prometheus-install/prometheus-rules/   @acme-corp/kafka-platform @acme-corp/sre
+/manifests/observability/prometheus-alertmanager-config/      @acme-corp/sre
 /manifests/demo-apps/                             @acme-corp/orders-team
 ```
 
@@ -224,7 +257,7 @@ See section 9, scenario E, with real failures.
 3. **The Strimzi KSM starts but exports nothing.** The official `ClusterRoleBinding` ships with
    `namespace: myproject` in `subjects`, and `kustomize` **does not rewrite** `ClusterRoleBinding`
    subjects. Symptom: `customresourcedefinitions ... is forbidden` in the KSM log and zero
-   `strimzi_*` metrics. Fixed in `ksm/ksm.yaml` (and documented there).
+   `strimzi_*` metrics. Fixed in `kube-state-metrics/ksm.yaml` (and documented there).
 4. **Prometheus takes a while to see a new `PodMonitor` (1–3 min).** Observed: the operator generates
    the configuration Secret right away (the config already contained the `podMonitor/` jobs), but
    Prometheus only reloaded ~3 min later — consistent with the slow propagation of a Secret mounted
@@ -251,16 +284,21 @@ Day10-Observabilidade/
 ├── README.md / README-EN.md
 ├── kind-config.yaml            # 1 control-plane + 3 workers; ports 3000/9090/9093 mapped to the host
 ├── lab/
-│   ├── app/                    # app.py (the 3 roles), Dockerfile, requirements.txt
+│   ├── app/                    # app.py (the 4 roles), Dockerfile, requirements.txt
 │   ├── git-server.yaml         # minimal Git INSIDE the cluster (same as Day 9) - lab only
 │   └── push-repo.sh            # seeds Git and creates the working clone in lab/work/observability
 └── gitops/                     # <<< the contents of the Git repository ArgoCD watches
     ├── bootstrap/              # appproject.yaml + root-app.yaml  (the ONLY manual kubectl apply)
     ├── apps/                   # 6 Applications (one per file, with sync-wave)
     ├── manifests/
-    │   ├── kafka/              # Kafka, KafkaNodePool (anti-affinity), KafkaTopic
-    │   ├── observability/      # podmonitors, rules/, alertmanagerconfig, datasource, ksm/, dashboards/*.json
-    │   └── demo-apps/          # producer, processor, sink + PodMonitor
+    │   ├── kafka/              # kafka-metrics.yaml (Kafka+NodePool), kafka-bridge-metrics.yaml (KafkaBridge), topics.yaml
+    │   ├── observability/      # <<< SAME layout as the official Strimzi examples/metrics (section 4.0)
+    │   │   ├── prometheus-install/{pod-monitors,prometheus-rules}/
+    │   │   ├── kube-state-metrics/        # configmap.yaml, ksm.yaml, prometheus-rules.yaml
+    │   │   ├── grafana-dashboards/        # *.json (4 official + Bridge + the lab e2e one)
+    │   │   ├── grafana-install/           # (lab) Tempo datasource
+    │   │   └── prometheus-alertmanager-config/  # (lab) AlertmanagerConfig + webhook
+    │   └── demo-apps/          # producer, bridge-producer, processor, sink + PodMonitor
     ├── ci/                     # validate.sh, extract_rules.py, tests/rules_test.yml
     └── .github/                # CODEOWNERS + workflow
 ```
@@ -296,8 +334,8 @@ kx wait --for=condition=Ready node --all --timeout=120s
 The sample app is a local image (a 7-line `Dockerfile`). We build it and load it into the kind nodes:
 
 ```bash
-docker build -q -t kafka-e2e-demo:0.1.0 lab/app
-kind load docker-image kafka-e2e-demo:0.1.0 --name strimzi-day10
+docker build -q -t kafka-e2e-demo:0.2.0 lab/app
+kind load docker-image kafka-e2e-demo:0.2.0 --name strimzi-day10
 ```
 
 ### 7.2 ArgoCD
@@ -382,6 +420,7 @@ my-cluster-dual-role-1                       1/1   Running strimzi-day10-worker2
 my-cluster-dual-role-2                       1/1   Running strimzi-day10-worker
 my-cluster-entity-operator-66d6858cdc-9thfn  2/2   Running strimzi-day10-worker2
 my-cluster-kafka-exporter-674c8dfc8b-j8nq8   1/1   Running strimzi-day10-worker3
+my-bridge-bridge-7d465464ff-l4x9w            1/1   Running strimzi-day10-worker
 ```
 
 > `order-producer` may restart **once** in the first minutes (`RESTARTS 1`): it starts before Kafka
@@ -395,10 +434,11 @@ curl -s localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | select(.l
 ```
 
 ```text
-   3 up	demo/order-pipeline
+   4 up	demo/order-pipeline
+   1 up	monitoring/bridge-metrics
    1 up	monitoring/cluster-operator-metrics
-   1 up	monitoring/entity-operator-metrics
-   3 up	monitoring/kafka-resources-metrics
+   2 up	monitoring/entity-operator-metrics
+   4 up	monitoring/kafka-resources-metrics
    2 up	kube-state-metrics
 ```
 
@@ -416,15 +456,17 @@ curl -s -u admin:admin 'localhost:3000/api/search?type=dash-db' | jq -r '.[] | s
 Pipeline	Order pipeline - end to end
 Strimzi	Strimzi KRaft
 Strimzi	Strimzi Kafka
+Strimzi	Strimzi Kafka Bridge
 Strimzi	Strimzi Kafka Exporter
 Strimzi	Strimzi Operators
 ```
 
 | Dashboard | What for | Origin |
 |---|---|---|
-| **Order pipeline - end to end** (`/d/e2e-pipeline`) | the 3 questions on one screen: business → Kafka → traces | written for this Day (`dashboards/e2e-pipeline.json`) |
+| **Order pipeline - end to end** (`/d/e2e-pipeline`) | the 3 questions on one screen: business → Kafka → traces | written for this Day (`grafana-dashboards/e2e-pipeline.json`) |
 | **Strimzi Kafka** | brokers: traffic, ISR, JVM, requests | official Strimzi, *Metrics Reporter* variant |
 | **Strimzi KRaft** | quorum, controller leader, metadata replication | official Strimzi, *Metrics Reporter* variant |
+| **Strimzi Kafka Bridge** | Bridge HTTP traffic (the Kafka client panels stay empty — scenario F) | official Strimzi, *Metrics Reporter* variant |
 | **Strimzi Kafka Exporter** | lag per consumer group, offsets per topic | official Strimzi |
 | **Strimzi Operators** | Cluster/Topic/User Operator reconciliations | official Strimzi |
 
@@ -440,13 +482,16 @@ CPU/memory without writing anything.
 ### 8.2 Prometheus (<http://localhost:9090>)
 
 - **Status → Targets:** the `PodMonitor`s became jobs (`monitoring/kafka-resources-metrics`, etc.).
-- **Alerts:** the 5 `PrometheusRule`s (brokers, Kafka Exporter, operators, Strimzi CRs and the pipeline),
+- **Alerts:** the 8 `PrometheusRule`s (brokers, Kafka Exporter, operators, Bridge, certificates, Strimzi CRs and the pipeline),
   **all inactive** on a healthy system. `Watchdog` (always firing) is the "the alerting pipeline is alive" alert.
   *Laptop gotcha:* the stock `PrometheusMissingRuleEvaluations` alert may show up as **Pending**
   in your lab. Observed here: **every** rule group triggers it — including the
   built-in `kube-prometheus-stack` ones — while each evaluation takes milliseconds. That points to the
   Docker VM running out of CPU or "sleeping" (an idle Mac), not to the lab's rules. *(Cause
   inferred, not isolated.)*
+  Right after `bootstrap`, `PrometheusErrorSendingAlertsToAnyAlertmanager` (Alertmanager was still starting) and
+  `PrometheusDuplicateTimestamps` (measured: it comes from Prometheus' own `job`, not from the Strimzi targets) may also show up as
+  *pending*. They go away by themselves; only `Watchdog` should stay *firing*.
 - **Graph:** useful queries for the conversation:
 
 ```promql
@@ -466,7 +511,7 @@ kx -n monitoring logs deploy/alert-webhook -f
 ```
 
 > In production the route points at Slack/PagerDuty (commented examples in
-> `alertmanagerconfig.yaml`; the *secret* lives in a `Secret`, never in Git).
+> `alert-manager-config.yaml`; the *secret* lives in a `Secret`, never in Git).
 
 ## 9. Hands-on scenarios
 
@@ -678,7 +723,7 @@ cd ../../../gitops && ci/validate.sh
    OK (...)
 == 3. promtool check rules
 Checking /w/rules.yml
-  SUCCESS: 47 rules found
+  SUCCESS: 51 rules found
 
 == 4. promtool test rules (unit tests)
 Processing test file: /w/rules_test.yml
@@ -710,6 +755,66 @@ Checking /w/rules.yml
 
 To change the threshold *on purpose*, the PR has to change the test too — and `CODEOWNERS` asks for a
 review from whoever gets paged by the alert. That is what prevents "alert silenced by accident".
+
+### Scenario F — A plain HTTP client: the Kafka Bridge, metrics and the trace that goes through it
+
+`order-bridge-producer` does not speak the Kafka protocol: it sends each order over **HTTP** to the `KafkaBridge`
+(`my-bridge`, a CR in the `kafka/` folder), which writes to the `orders` topic. The Bridge was deployed like the
+official `kafka-bridge-metrics.yaml` example (metrics via `strimziMetricsReporter`) with **OpenTelemetry tracing**.
+
+```bash
+kx -n kafka get kafkabridge,pod -l strimzi.io/cluster=my-bridge
+kx -n kafka get kafkabridge my-bridge -o jsonpath='{.status.conditions[0].type}={.status.conditions[0].status}{"\n"}{.status.url}{"\n"}'
+```
+
+```text
+Ready=True
+http://my-bridge-bridge-service.kafka.svc:8080
+```
+
+**1) Metrics.** The official `bridge-metrics` `PodMonitor` scrapes the management port `rest-api-mgmt` (8081). In
+Grafana, open **Strimzi Kafka Bridge**; in Prometheus:
+
+```promql
+sum by (code, path) (rate(strimzi_bridge_http_server_requests_total[1m]))
+```
+
+**2) Alert.** Generate 4xx errors (wrong Content-Type) **at a steady pace** — `increase()` needs samples before
+*and* after, so a single burst of 40 requests that shows up all at once raises no alert (the counter is "born" at
+40; that is what the first test showed):
+
+```bash
+kx -n kafka exec deploy/my-bridge-bridge -- sh -c 'for i in $(seq 1 150); do curl -s -o /dev/null -X POST -H "Content-Type: text/plain" -d x http://localhost:8080/topics/orders; sleep 1; done'
+```
+
+In ~90 s (measured) it reaches the webhook:
+
+```text
+[FIRING  ] warning  Http4xxErrorRate: Kafka Bridge returned 93 HTTP 400 in 5 min for /topics/orders
+```
+
+**3) Trace.** The `traceparent` goes in the **HTTP header**; the Bridge continues it and injects it into the Kafka
+record. A single trace (Explore → Tempo, `{ resource.service.name = "my-bridge" }`):
+
+```text
++    0ms dur=  26ms  order-bridge-producer  create order (HTTP)                CLIENT
++   13ms dur=  12ms  my-bridge              send                               SERVER
++   14ms dur=   0ms  my-bridge              orders publish                     PRODUCER
++   39ms dur=  22ms  order-processor        orders process                     CONSUMER
++   39ms dur=  21ms  order-processor        validate and enrich order          INTERNAL
++   61ms dur=   0ms  order-processor        orders.processed send              PRODUCER
++   85ms dur=  12ms  order-sink             orders.processed process           CONSUMER
++   85ms dur=  12ms  order-sink             send notification                  INTERNAL
+```
+
+> **What did NOT show up (honest result):** with Bridge **1.0.0** (the image shipped with Strimzi 1.1.0), the
+> **Kafka client** metrics (`kafka_producer_*`, `kafka_consumer_*`, and the JMX exporter's `strimzi_bridge_kafka_*`)
+> were **not exposed** — neither with `strimziMetricsReporter` nor with `jmxPrometheusExporter` (I tested both; only
+> `strimzi_bridge_http_server_*` and JVM metrics came out). Consequences: the client panels of the official Bridge
+> dashboard stay empty, and the 3 official latency rules (`AvgProducerLatency`, `AvgConsumerFetchLatency`,
+> `AvgConsumerCommitLatency`) were **removed** from the lab — an alert on a metric that never exists is eternal
+> silence. We also replaced the official `Http4xx/5xxErrorRate` (which compares the *raw counter* `> 10`, so it never
+> resolves) with `increase(...[5m])`. The cause of the missing client metrics was **not isolated**.
 
 ## 10. End-to-end tracing
 
@@ -770,7 +875,7 @@ def process_span(msg):
 
 Kafka itself **emits no spans**: in the waterfall, the broker is the gap between `send` and `process`.
 That is inherent to Kafka, not to the lab. Strimzi documents OpenTelemetry tracing for
-**Kafka Connect, MirrorMaker 2 and Kafka Bridge** (not exercised in this lab — section 12). For
+**Kafka Connect, MirrorMaker 2 and Kafka Bridge**. **The Bridge was exercised here** (scenario F: the trace crosses the Bridge); Connect and MM2 were not (section 12). For
 **Java** applications, the OpenTelemetry *agent* instruments `kafka-clients` with no code change
 (also not exercised here).
 
@@ -804,12 +909,14 @@ Three more decisions worth a conversation:
   left to validate on your GitHub: permissions, check triggering, *branch protection* with Code Owners.
 - **Real receivers (Slack, PagerDuty, e-mail)** were not tested — only the lab webhook. The route and
   the commented examples exist, but real delivery does not.
-- **Tracing on Kafka Connect, MirrorMaker 2 and Kafka Bridge** (supported by Strimzi) and the
-  OpenTelemetry **Java agent** were **not exercised**: the sample app is Python. The other Strimzi
-  components (Connect, MM2, Bridge) also have **no** metrics wired in this lab.
-- **`jmxPrometheusExporter` was not deployed** — only described in section 3 (the lab uses the
-  Metrics Reporter). The Metrics Reporter metric *allowlist* (`metricsConfig.values.allowList`) was
+- **Tracing on Kafka Connect and MirrorMaker 2** (supported by Strimzi) and the OpenTelemetry
+  **Java agent** were **not exercised**: the sample app is Python. Connect and MM2 also have **no**
+  metrics wired in this lab (the Bridge does).
+- **`jmxPrometheusExporter` is not part of the lab** — it was used only on a **throwaway test** `KafkaBridge` (scenario F) and described in section 3 (the lab uses the
+  Metrics Reporter on the brokers and the Bridge). The Metrics Reporter metric *allowlist* (`metricsConfig.values.allowList`) was
   not exercised either: the lab uses the default set.
+- **Kafka Bridge:** only the **HTTP producer** path was exercised (no HTTP *consumer*) and the Bridge's **Kafka client** metrics did not show up (scenario F). The official `CertificateExpiration` rule is in the lab but **was not exercised** (the certificates are new).
+- **Strimzi's `prometheus-install/prometheus.yaml`, `alert-manager.yaml`, `prometheus-additional-properties/` and `grafana-install/grafana.yaml` were not used** — `kube-prometheus-stack` replaces them (section 4.0); the 100% by-the-docs path was not tested.
 - **Cruise Control** (Day 6/7): its metrics and the `strimzi-cruise-control.json` dashboard were not
   wired in here.
 - **`kubelet_volume_stats_*` does not exist on kind** (pitfall 5): the PVC free-space alert and panel
@@ -818,6 +925,7 @@ Three more decisions worth a conversation:
   `remote_write` is outside this Day.
 - **No TLS/authentication** on Kafka, Tempo, Grafana and the lab Git. Nothing here is production
   configuration.
+- **Tempo and memory:** with continuous traffic (~5 traces/s, 100% sampling) the single-binary Tempo hit its 768Mi limit and was `OOMKilled` (5 restarts in 25h) — symptom: Grafana showed `connection refused` on port 3200. The lab now uses a 1536Mi limit and 6 h retention; if you leave the lab up for days, **watch** `kube_pod_container_status_last_terminated_reason`. In production, size Tempo (or use `tempo-distributed`) and lower the sampling rate.
 - **The timings** (~4 min for an alert, ~2 min for Prometheus to find a `PodMonitor`) were measured on
   Docker Desktop (Apple Silicon); on your machine they will vary.
 
@@ -828,7 +936,7 @@ kind delete cluster --name strimzi-day10
 pkill -f "port-forward svc/git-server" 2>/dev/null
 pkill -f "port-forward svc/argocd-server" 2>/dev/null
 rm -rf lab/work lab/app/__pycache__
-docker rmi kafka-e2e-demo:0.1.0 2>/dev/null
+docker rmi kafka-e2e-demo:0.2.0 2>/dev/null
 ```
 
 ## 14. Suggested video script
@@ -846,6 +954,7 @@ Target duration: **~25 min**. The thread is the three questions from section 1; 
 | 15:00 | **Scenario C** | PR with `replicas: 5` → ArgoCD "Synced" but topic `Ready=False` → KSM alert. "Git ok ≠ Kafka ok" |
 | 18:00 | **Tracing** | Open one order's trace: 3 services, 2 topics; the gap = time in the topic; show `process_span` and the `traceparent` header |
 | 21:00 | **Scenario D** | `{ status = error }` in Tempo: from the aggregate alert to the individual order |
+| 22:00 | **Scenario F (quick)** | HTTP client → `KafkaBridge`: one trace client → Bridge → processor → sink; and the 4xx alert |
 | 22:30 | Scenario B (quick) | Node cordon → URP → "a quick restart must not wake anyone" (and the 60 per-partition alerts) |
 | 24:00 | Scenario E + wrap-up | `ci/validate.sh` failing an alert PR; the section 11 checklist; Day 11 teaser (external access) |
 
@@ -861,4 +970,5 @@ Target duration: **~25 min**. The thread is the three questions from section 1; 
 - [Grafana Tempo](https://grafana.com/docs/tempo/latest/) and [TraceQL](https://grafana.com/docs/tempo/latest/traceql/)
 - [OpenTelemetry — messaging semantic conventions](https://opentelemetry.io/docs/specs/semconv/messaging/) and [context propagation (W3C Trace Context)](https://www.w3.org/TR/trace-context/)
 - [Argo CD — App of Apps and Sync Waves](https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/)
+- Strimzi — [Kafka Bridge](https://strimzi.io/docs/operators/latest/deploying) (chapter *Deploying Kafka Bridge*) and the [Strimzi Kafka Bridge project](https://github.com/strimzi/strimzi-kafka-bridge)
 - [Day 8 — Topic and User Operator](../Day8-TopicUserOperators/) and [Day 9 — Multi-team GitOps](../Day9-GitOps-MultiTime/) (the lab Git server and `selfHeal` come from there)

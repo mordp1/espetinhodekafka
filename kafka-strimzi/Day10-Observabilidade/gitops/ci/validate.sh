@@ -15,7 +15,7 @@ kubectl kustomize manifests/observability > "$WORK/rendered.yaml"
 echo "   OK ($(grep -c '^kind:' "$WORK/rendered.yaml") resources)"
 
 echo "== 2. dashboards are valid JSON"
-for f in manifests/observability/dashboards/*.json; do jq empty "$f" && echo "   OK $(basename "$f")"; done
+for f in manifests/observability/grafana-dashboards/*.json; do jq empty "$f" && echo "   OK $(basename "$f")"; done
 
 echo "== 3. promtool check rules"
 python3 -m venv "$WORK/venv" >/dev/null && "$WORK/venv/bin/pip" install -q -r ci/requirements.txt

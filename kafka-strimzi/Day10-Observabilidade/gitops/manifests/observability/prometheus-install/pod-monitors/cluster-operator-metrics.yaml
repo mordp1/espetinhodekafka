@@ -1,0 +1,13 @@
+# Official file: examples/metrics/prometheus-install/pod-monitors/cluster-operator-metrics.yaml (Strimzi 1.1.0). Lab change: namespaceSelector (myproject -> the lab namespaces)
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: cluster-operator-metrics
+  labels: { app: strimzi }
+spec:
+  selector:
+    matchLabels: { strimzi.io/kind: cluster-operator }
+  namespaceSelector:
+    matchNames: [strimzi-operator]
+  podMetricsEndpoints:
+    - { path: /metrics, port: http }

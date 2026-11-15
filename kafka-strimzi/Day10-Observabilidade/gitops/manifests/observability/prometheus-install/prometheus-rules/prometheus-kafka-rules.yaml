@@ -1,14 +1,15 @@
+# Official file: examples/metrics/prometheus-install/prometheus-rules/prometheus-kafka-rules.yaml (Strimzi 1.1.0), adapted - see header below.
 # Broker/controller alerts, adapted from the official Strimzi examples (examples/metrics/prometheus-install/prometheus-rules, 1.1.0).
 # Differences: team label for routing, runbook-style descriptions, and "for" values that make the lab demos fire in ~1 minute.
 # PRODUCTION: keep "for" at 5m+ for anything that self-heals (a rolling restart makes URP > 0 for a minute and that is NORMAL).
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: kafka-brokers
+  name: kafka-rules
   labels: { role: alert-rules, app: strimzi }
 spec:
   groups:
-    - name: kafka-brokers
+    - name: kafka
       rules:
         - alert: KafkaUnderReplicatedPartitions
           expr: sum by (namespace, kubernetes_pod_name) (kafka_server_replicamanager_underreplicatedpartitions) > 0

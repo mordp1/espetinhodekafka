@@ -1,6 +1,6 @@
 """Demo pipeline for the Strimzi Day 10 lab: producer -> [orders] -> processor -> [orders.processed] -> sink.
 
-One file, three roles (env ROLE=producer|processor|sink). Every role:
+One file, four roles (env ROLE=producer|bridge-producer|processor|sink). Every role:
   * exposes Prometheus metrics on :8000/metrics  (business metrics: throughput, errors, end-to-end latency)
   * emits OpenTelemetry traces over OTLP/gRPC; the trace context travels INSIDE the Kafka record headers
     (W3C `traceparent`), so one trace follows a message across both topics and all three services.
@@ -15,6 +15,7 @@ import os
 import random
 import signal
 import time
+import urllib.request
 import uuid
 
 from confluent_kafka import Consumer, KafkaError, Producer
@@ -35,6 +36,7 @@ RATE = float(os.environ.get("RATE", "5"))                 # producer: messages p
 PROCESS_MS = float(os.environ.get("PROCESS_MS", "30"))    # processor/sink: simulated work per message
 ERROR_RATE = float(os.environ.get("ERROR_RATE", "0"))     # processor: fraction of messages that fail (0..1)
 GROUP = os.environ.get("GROUP_ID", f"order-{ROLE}")
+BRIDGE_URL = os.environ.get("BRIDGE_URL", "http://my-bridge-bridge-service.kafka.svc:8080")   # bridge-producer only
 
 logging.basicConfig(level=logging.INFO, format=f"%(asctime)s {ROLE} %(levelname)s %(message)s")
 log = logging.getLogger(ROLE)
@@ -132,6 +134,34 @@ def run_producer():
     p.flush(10)
 
 
+def run_bridge_producer():
+    """Same orders, but sent over HTTP to the Strimzi Kafka Bridge (a client that cannot speak the Kafka protocol).
+
+    The W3C `traceparent` goes in the HTTP REQUEST headers; the Bridge (tracing: opentelemetry) continues that trace and
+    writes it into the Kafka record headers - so the downstream processor/sink spans join the SAME trace.
+    """
+    interval = 1.0 / RATE
+    log.info("producing to %s through the Bridge at %s (%.1f msg/s)", TOPIC_IN, BRIDGE_URL, RATE)
+    while running:
+        order = {"order_id": str(uuid.uuid4()), "customer": f"c{random.randint(1, 20)}",
+                 "amount": round(random.uniform(5, 500), 2), "created_at": time.time()}
+        with tracer.start_as_current_span("create order (HTTP)", kind=SpanKind.CLIENT) as span:
+            span.set_attribute("order.id", order["order_id"])
+            headers = {"Content-Type": "application/vnd.kafka.json.v2+json"}
+            propagate.inject(headers)                      # adds `traceparent` to the HTTP request
+            body = json.dumps({"records": [{"key": order["customer"], "value": order}]}).encode()
+            req = urllib.request.Request(f"{BRIDGE_URL}/topics/{TOPIC_IN}", data=body, headers=headers, method="POST")
+            try:
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    span.set_attribute("http.status_code", resp.status)
+                PRODUCED.labels(TOPIC_IN).inc()
+            except Exception as exc:                       # HTTPError (4xx/5xx), timeouts, connection refused...
+                PRODUCE_ERRORS.labels(TOPIC_IN).inc()
+                span.set_status(Status(StatusCode.ERROR, str(exc)))
+                log.error("bridge request failed: %s", exc)
+        time.sleep(interval)
+
+
 def run_processor():
     c, p = make_consumer(TOPIC_IN), make_producer()
     log.info("processing %s -> %s (PROCESS_MS=%s ERROR_RATE=%s)", TOPIC_IN, TOPIC_OUT, PROCESS_MS, ERROR_RATE)
@@ -195,5 +225,5 @@ def run_sink():
 
 if __name__ == "__main__":
     start_http_server(int(os.environ.get("METRICS_PORT", "8000")))
-    {"producer": run_producer, "processor": run_processor, "sink": run_sink}[ROLE]()
+    {"producer": run_producer, "bridge-producer": run_bridge_producer, "processor": run_processor, "sink": run_sink}[ROLE]()
     provider.shutdown()
