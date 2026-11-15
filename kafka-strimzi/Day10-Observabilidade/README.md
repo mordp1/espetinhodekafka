@@ -547,13 +547,15 @@ kubectl --context kind-strimzi-day10 -n git port-forward svc/git-server 18080:80
 ```
 
 No terminal principal, entre no clone de trabalho e defina um atalho para o `git` com identidade de lab.
-Os comandos abaixo **não dependem da pasta em que você está** (só de estar dentro do repositório) e avisam se o clone
-de trabalho ainda não existe — ele é criado pelo `lab/push-repo.sh` (seção 7.3):
+Os comandos abaixo **não dependem da pasta em que você está** (só de estar dentro do repositório) e, se o clone de
+trabalho ainda não existe, o criam rodando o `lab/push-repo.sh` (seção 7.3). Atenção: `lab/work/` é **local de cada
+cópia do repositório** (está no `.gitignore`) — se você trocou de pasta/branch/worktree, rode o `push-repo.sh` de novo:
 
 ```bash
 D10="$(git rev-parse --show-toplevel)/kafka-strimzi/Day10-Observabilidade"   # raiz do Day 10, de qualquer pasta do repo
 kx() { kubectl --context kind-strimzi-day10 "$@"; }                           # (necessário se este é um terminal novo)
-cd "$D10/lab/work/observability" || echo ">> lab/work/observability não existe: rode $D10/lab/push-repo.sh (seção 7.3)"
+[ -d "$D10/lab/work/observability" ] || "$D10/lab/push-repo.sh"                # o clone de trabalho nasce do push-repo.sh (seção 7.3); precisa do cluster no ar
+cd "$D10/lab/work/observability"
 lg() { git -c user.name=lab -c user.email=lab@example.com "$@"; }
 ```
 
