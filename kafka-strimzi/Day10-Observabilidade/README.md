@@ -822,6 +822,7 @@ Mais três decisões que valem uma conversa:
   `remote_write` por região fica fora deste Day.
 - **Sem TLS/autenticação** no Kafka, no Tempo, no Grafana e no Git do lab. Nada daqui é
   configuração de produção.
+- **Tempo e memória:** com tráfego contínuo (~5 traces/s, 100% de amostragem) o Tempo single-binary chegou ao limite de 768Mi e foi `OOMKilled` (5 restarts em 25h) — sintoma: o Grafana mostrava `connection refused` na porta 3200. O lab agora usa limite de 1536Mi e retenção de 6 h; deixe o lab ligado por dias e **acompanhe** `kube_pod_container_status_last_terminated_reason`. Em produção, dimensione o Tempo (ou use `tempo-distributed`) e reduza a amostragem.
 - **Os tempos** (~4 min para um alerta, ~2 min para o Prometheus achar um `PodMonitor`) foram medidos
   num Docker Desktop (Apple Silicon); no seu ambiente variam.
 

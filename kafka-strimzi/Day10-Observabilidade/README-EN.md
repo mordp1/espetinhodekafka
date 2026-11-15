@@ -818,6 +818,7 @@ Three more decisions worth a conversation:
   `remote_write` is outside this Day.
 - **No TLS/authentication** on Kafka, Tempo, Grafana and the lab Git. Nothing here is production
   configuration.
+- **Tempo and memory:** with continuous traffic (~5 traces/s, 100% sampling) the single-binary Tempo hit its 768Mi limit and was `OOMKilled` (5 restarts in 25h) — symptom: Grafana showed `connection refused` on port 3200. The lab now uses a 1536Mi limit and 6 h retention; if you leave the lab up for days, **watch** `kube_pod_container_status_last_terminated_reason`. In production, size Tempo (or use `tempo-distributed`) and lower the sampling rate.
 - **The timings** (~4 min for an alert, ~2 min for Prometheus to find a `PodMonitor`) were measured on
   Docker Desktop (Apple Silicon); on your machine they will vary.
 
