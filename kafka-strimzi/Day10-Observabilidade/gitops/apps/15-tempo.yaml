@@ -17,6 +17,20 @@ spec:
       releaseName: tempo
       valuesObject:
         tempo:
+          # Metrics generator: Tempo turns SPANS into METRICS and remote-writes them to Prometheus (needs enableRemoteWriteReceiver there).
+          #   service-graphs -> traces_service_graph_*  (the service map)      span-metrics -> traces_spanmetrics_*  (latency per span)
+          #   local-blocks   -> TraceQL metrics         ({ ... } | quantile_over_time(duration, .95))
+          metricsGenerator:
+            enabled: true
+            remoteWriteUrl: http://kps-kube-prometheus-stack-prometheus.monitoring:9090/api/v1/write
+            processor:
+              service_graphs: { wait: 10s }
+              span_metrics: { dimensions: [messaging.destination.name] }
+              local_blocks: { flush_to_storage: true, filter_server_spans: false }   # false: keep INTERNAL spans too (e.g. "validate and enrich order")
+          overrides:
+            defaults:
+              metrics_generator:
+                processors: [service-graphs, span-metrics, local-blocks]
           retention: 6h                   # LAB: the lab emits ~5 traces/s non-stop; short retention keeps Tempo's memory bounded
           resources:
             requests: { cpu: 50m, memory: 384Mi }

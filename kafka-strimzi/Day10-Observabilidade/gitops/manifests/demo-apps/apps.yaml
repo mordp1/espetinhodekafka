@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: kafka-e2e-demo:0.1.0          # built from lab/app and loaded into kind (README, section 6)
+          image: kafka-e2e-demo:0.2.0          # built from lab/app and loaded into kind (README, section 6)
           imagePullPolicy: IfNotPresent
           env:
             - { name: ROLE, value: producer }
@@ -44,7 +44,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: kafka-e2e-demo:0.1.0          # built from lab/app and loaded into kind (README, section 6)
+          image: kafka-e2e-demo:0.2.0          # built from lab/app and loaded into kind (README, section 6)
           imagePullPolicy: IfNotPresent
           env:
             - { name: ROLE, value: processor }
@@ -75,7 +75,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: kafka-e2e-demo:0.1.0          # built from lab/app and loaded into kind (README, section 6)
+          image: kafka-e2e-demo:0.2.0          # built from lab/app and loaded into kind (README, section 6)
           imagePullPolicy: IfNotPresent
           env:
             - { name: ROLE, value: sink }

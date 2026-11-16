@@ -46,6 +46,9 @@ CONSUMED = Counter("demo_messages_consumed", "Messages consumed", ["stage", "top
 PROC_ERRORS = Counter("demo_processing_errors", "Messages that failed processing", ["stage"])
 STAGE_SECONDS = Histogram("demo_stage_processing_seconds", "Time spent processing one message", ["stage"],
                           buckets=(.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5))
+TOPIC_WAIT_SECONDS = Histogram(
+    "demo_topic_wait_seconds", "Time the record waited in the topic: broker append time -> this consumer received it", ["topic"],
+    buckets=(.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 30, 60, 120, 300))
 E2E_SECONDS = Histogram("demo_end_to_end_latency_seconds",
                         "Time between the producer creating the order and the sink consuming it", [],
                         buckets=(.05, .1, .25, .5, 1, 2.5, 5, 10, 30, 60, 120))
@@ -100,6 +103,13 @@ def process_span(msg):
                     "messaging.kafka.consumer.group": GROUP})
 
 
+def observe_topic_wait(msg):
+    """The "gap" of the trace waterfall, as a metric: how long the record sat in the topic (replication + queue behind the lag)."""
+    ts_type, ts_ms = msg.timestamp()
+    if ts_ms > 0:
+        TOPIC_WAIT_SECONDS.labels(msg.topic()).observe(max(0.0, time.time() - ts_ms / 1000))
+
+
 def delivery_report(topic):
     def _cb(err, _msg):
         if err is not None:
@@ -145,6 +155,7 @@ def run_processor():
                 log.error("consumer error: %s", msg.error())
             continue
         CONSUMED.labels("processor", TOPIC_IN).inc()
+        observe_topic_wait(msg)
         order = json.loads(msg.value())
         t0 = time.time()
         with process_span(msg) as span:                # parent = the producer's span, via the Kafka headers
@@ -181,6 +192,7 @@ def run_sink():
                 log.error("consumer error: %s", msg.error())
             continue
         CONSUMED.labels("sink", TOPIC_OUT).inc()
+        observe_topic_wait(msg)
         order = json.loads(msg.value())
         t0 = time.time()
         with process_span(msg) as span:

@@ -44,3 +44,6 @@ configMapGenerator:
   - name: dashboard-e2e-pipeline
     files: [grafana-dashboards/e2e-pipeline.json]
     options: { annotations: { grafana_folder: Pipeline } }
+  - name: dashboard-e2e-latency
+    files: [grafana-dashboards/e2e-latency.json]
+    options: { annotations: { grafana_folder: Pipeline } }
