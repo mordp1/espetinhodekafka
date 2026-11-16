@@ -166,7 +166,7 @@ encontra tudo no mesmo lugar. A tabela mostra o mapeamento (arquivos oficiais da
 | `prometheus-install/pod-monitors/{cluster-operator,entity-operator,kafka-resources}-metrics.yaml` | `observability/prometheus-install/pod-monitors/` (mesmos 3 nomes) | `namespaceSelector` aponta para os namespaces do lab (`myproject` → `kafka`, `strimzi-operator`) |
 | `prometheus-install/prometheus-rules/prometheus-{kafka,kafka-exporter-topic-rules-group,strimzi-cluster-operator,strimzi-entity-operator,kafka-certificate}-rules.yaml` | mesma pasta, mesmos nomes de arquivo e de `PrometheusRule` | label `team: kafka-platform` (roteamento), `for` menores, e **sinais do kube-state-metrics** no lugar de `container_last_seen`/regex `.+-kafka-N` (que não casam com nomes de node pool); detalhes no cabeçalho de cada arquivo |
 | `kube-state-metrics/{configmap,ksm,prometheus-rules}.yaml` | `observability/kube-state-metrics/` | só o `namespace` do `ClusterRoleBinding` (armadilha 3) e `for: 1m` |
-| `strimzi-metrics-reporter/grafana-dashboards/*.json` | `observability/grafana-dashboards/` | iguais; + dashboard `e2e-pipeline.json` (do lab) |
+| `strimzi-metrics-reporter/grafana-dashboards/*.json` | `observability/grafana-dashboards/` | iguais; + dashboard `e2e-pipeline.json` e `e2e-latency.json` (do lab) |
 | `prometheus-install/prometheus.yaml`, `alert-manager.yaml`, `prometheus-additional-properties/`, `grafana-install/grafana.yaml` | **substituídos pelo `kube-prometheus-stack`** (`apps/10-kube-prometheus-stack.yaml`) | decisão do lab, explicada abaixo |
 | `prometheus-alertmanager-config/alert-manager-config.yaml` (um Secret com o `alertmanager.yaml`) | `observability/prometheus-alertmanager-config/alert-manager-config.yaml` (um `AlertmanagerConfig`) | CR em vez de Secret: cada time versiona suas rotas |
 
@@ -296,7 +296,7 @@ Day10-Observabilidade/
     │   ├── observability/      # <<< MESMO layout do examples/metrics oficial do Strimzi (seção 4.0)
     │   │   ├── prometheus-install/{pod-monitors,prometheus-rules}/
     │   │   ├── kube-state-metrics/        # configmap.yaml, ksm.yaml, prometheus-rules.yaml
-    │   │   ├── grafana-dashboards/        # *.json (4 oficiais + o e2e do lab)
+    │   │   ├── grafana-dashboards/        # *.json (4 oficiais + 2 do lab: e2e e latência)
     │   │   ├── grafana-install/           # (lab) datasource do Tempo
     │   │   └── prometheus-alertmanager-config/  # (lab) AlertmanagerConfig + webhook
     │   └── demo-apps/          # producer, processor, sink + PodMonitor
@@ -335,8 +335,8 @@ kx wait --for=condition=Ready node --all --timeout=120s
 O app de exemplo é uma imagem local (um `Dockerfile` de 7 linhas). Construímos e carregamos nos nós do kind:
 
 ```bash
-docker build -q -t kafka-e2e-demo:0.1.0 lab/app
-kind load docker-image kafka-e2e-demo:0.1.0 --name strimzi-day10
+docker build -q -t kafka-e2e-demo:0.2.0 lab/app
+kind load docker-image kafka-e2e-demo:0.2.0 --name strimzi-day10
 ```
 
 ### 7.2 ArgoCD
@@ -455,6 +455,7 @@ curl -s -u admin:admin 'localhost:3000/api/search?type=dash-db' | jq -r '.[] | s
 
 ```text
 Pipeline	Order pipeline - end to end
+Pipeline	Order pipeline - where is the time going?
 Strimzi	Strimzi KRaft
 Strimzi	Strimzi Kafka
 Strimzi	Strimzi Kafka Exporter
@@ -464,6 +465,7 @@ Strimzi	Strimzi Operators
 | Dashboard | Para quê | Origem |
 |---|---|---|
 | **Order pipeline - end to end** (`/d/e2e-pipeline`) | as 3 perguntas numa tela só: negócio → Kafka → traces | escrito para este Day (`grafana-dashboards/e2e-pipeline.json`) |
+| **Order pipeline - where is the time going?** (`/d/e2e-latency`) | **onde está a latência e o gargalo**: tempo por etapa, heatmap, mapa de serviços e latência por span (seção 10.3) | escrito para este Day (`grafana-dashboards/e2e-latency.json`) |
 | **Strimzi Kafka** | brokers: tráfego, ISR, JVM, requisições | oficial Strimzi, variante *Metrics Reporter* |
 | **Strimzi KRaft** | quorum, líder do controller, replicação de metadados | oficial Strimzi, variante *Metrics Reporter* |
 | **Strimzi Kafka Exporter** | lag por consumer group, offsets por tópico | oficial Strimzi |
@@ -512,6 +514,59 @@ kx -n monitoring logs deploy/alert-webhook -f
 > Em produção a rota aponta para Slack/PagerDuty (exemplos comentados em
 > `alert-manager-config.yaml`; o *secret* fica num `Secret`, nunca no Git).
 
+#### Mostrando a árvore de roteamento: Alertmanager Routing Tree Editor
+
+Para *desenhar* e *testar* as rotas (em vez de ler YAML), use o
+[Routing Tree Editor](https://prometheus.io/webtools/alerting/routing-tree-editor/) do site do Prometheus: você cola
+um `alertmanager.yml`, ele desenha a árvore, e você digita o conjunto de labels de um alerta para ver **o caminho que ele
+percorre e os receivers que o recebem**. O lab traz um exemplo pronto, com a forma de produção do roteamento (3 receivers, um
+`continue`, uma inibição) usando as mesmas labels das regras do lab:
+[`gitops/ci/routing-tree/alertmanager.yml`](gitops/ci/routing-tree/alertmanager.yml).
+
+```text
+.
+└── default-route  receiver: platform-default
+    ├── {alertname="Watchdog"}  receiver: null
+    ├── {alertname=~"OrderPipeline.*|OrderProducerErrors"}  continue: true  receiver: orders-team-slack
+    └── {team="kafka-platform"}  receiver: kafka-platform-slack
+        ├── {severity="critical"}  continue: true  receiver: kafka-platform-pagerduty
+        └── default-route  receiver: kafka-platform-slack
+```
+
+**Roteiro de 2 minutos:** (1) cole o arquivo na caixa e clique **Draw Routing Tree**; (2) em *Match Label Set*, cole um dos conjuntos
+abaixo e clique **Match Label Set** — os nós por onde o alerta passa ficam preenchidos:
+
+| Conjunto de labels (cole no editor) | Receivers que recebem | O que ensina |
+|---|---|---|
+| `{alertname="KafkaUnderMinIsrPartitions", severity="critical", team="kafka-platform", namespace="kafka"}` | `kafka-platform-pagerduty` **+** `kafka-platform-slack` | `continue: true`: acorda o plantão **e** avisa o canal |
+| `{alertname="KafkaConsumerGroupLagHigh", severity="warning", team="kafka-platform", namespace="kafka"}` | `kafka-platform-slack` | warning não paga (não casa com `severity="critical"`) |
+| `{alertname="OrderPipelineStalled", severity="critical", team="kafka-platform"}` | `orders-team-slack` + `kafka-platform-pagerduty` + `kafka-platform-slack` | **três** receivers por causa de dois `continue` encadeados |
+| `{alertname="KafkaTopicNotReady", severity="warning", team="kafka-platform", namespace="kafka"}` | `kafka-platform-slack` | o alerta do cenário C chegando ao dono certo |
+| `{alertname="KubeletDown", severity="warning", namespace="kube-system"}` | `platform-default` | sem `team`, cai na rota raiz: o *fallback* |
+| `{alertname="Watchdog", severity="none"}` | `null` | o "estou vivo" nunca acorda ninguém |
+
+**A pegadinha para mostrar ao vivo:** apague a última rota filha (`- receiver: kafka-platform-slack`, a "3b") e redesenhe. Um alerta
+**crítico** passa a chegar **só** no PagerDuty, sem o Slack: o receiver do *pai* só é usado quando **nenhum filho** casa, e o filho
+`critical` casou. É o erro mais comum de quem aprende `continue`.
+
+**Os mesmos testes, sem navegador** (e dá para rodar em CI): [`gitops/ci/routing-tree/test.sh`](gitops/ci/routing-tree/test.sh) usa o
+`amtool` (a mesma lógica do Alertmanager) e afirma "este conjunto de labels deve chegar **a estes** receivers". Todos os 7 casos da
+tabela passaram com o Alertmanager v0.35.0 do lab (`amtool check-config`, `routes show`, `routes test`); o editor web foi conferido
+à mão com a config em versão enxuta (só rotas), desenhando a árvore e destacando `pagerduty` + `slack` para o caso crítico.
+
+**E o roteamento *real* do lab?** O `AlertmanagerConfig` é um CR; o que o Alertmanager executa é o YAML que o operador **gera**. Para
+colar *aquele* no editor:
+
+```bash
+kx -n monitoring get secret alertmanager-kps-kube-prometheus-stack-alertmanager-generated -o jsonpath='{.data.alertmanager\.yaml\.gz}' | base64 -d | gunzip
+```
+
+Nele aparecem a rota `team="kafka-platform"` (com `continue: true`, que **não está no CR**: o operador o acrescentou ao gerar o YAML) e a rota do `Watchdog`, além das regras de inibição padrão do
+`kube-prometheus-stack` (`critical` inibe `warning` do mesmo `alertname`+`namespace`).
+
+> O editor desenha só a **árvore de rotas**: `inhibit_rules`, `mute_time_intervals` e os parâmetros de timing (`group_wait`, etc.)
+> não são visualizados por ele (pelo que vimos) — por isso o exemplo os traz comentados no arquivo.
+
 ### 8.4 Kafbat UI (<http://localhost:8088>): tópicos e mensagens
 
 Dashboards mostram **números**; para **ver o conteúdo** — "o pedido `X` chegou ao tópico?", "qual o formato da
@@ -547,13 +602,15 @@ kubectl --context kind-strimzi-day10 -n git port-forward svc/git-server 18080:80
 ```
 
 No terminal principal, entre no clone de trabalho e defina um atalho para o `git` com identidade de lab.
-Os comandos abaixo **não dependem da pasta em que você está** (só de estar dentro do repositório) e avisam se o clone
-de trabalho ainda não existe — ele é criado pelo `lab/push-repo.sh` (seção 7.3):
+Os comandos abaixo **não dependem da pasta em que você está** (só de estar dentro do repositório) e, se o clone de
+trabalho ainda não existe, o criam rodando o `lab/push-repo.sh` (seção 7.3). Atenção: `lab/work/` é **local de cada
+cópia do repositório** (está no `.gitignore`) — se você trocou de pasta/branch/worktree, rode o `push-repo.sh` de novo:
 
 ```bash
 D10="$(git rev-parse --show-toplevel)/kafka-strimzi/Day10-Observabilidade"   # raiz do Day 10, de qualquer pasta do repo
 kx() { kubectl --context kind-strimzi-day10 "$@"; }                           # (necessário se este é um terminal novo)
-cd "$D10/lab/work/observability" || echo ">> lab/work/observability não existe: rode $D10/lab/push-repo.sh (seção 7.3)"
+[ -d "$D10/lab/work/observability" ] || "$D10/lab/push-repo.sh"                # o clone de trabalho nasce do push-repo.sh (seção 7.3); precisa do cluster no ar
+cd "$D10/lab/work/observability"
 lg() { git -c user.name=lab -c user.email=lab@example.com "$@"; }
 ```
 
@@ -579,6 +636,10 @@ Abra o dashboard **Order pipeline - end to end**
 - *Consumer-group lag*: sobe linearmente (`order-processor` em `orders`);
 - *Time spent processing*: o p95 do `processor` salta para ~800 ms;
 - *End-to-end latency*: p50/p95/p99 sobem (cada mensagem espera em fila no tópico).
+
+Agora abra o **Order pipeline - where is the time going?** (<http://localhost:3000/d/e2e-latency>): a faixa
+*wait in topic orders* do gráfico empilhado explode (medido: ~28 s de p95) enquanto *processor work* fica em
+~0,9 s — o gargalo é **fila**, não código. O heatmap sobe em faixas e o mapa de serviços/spans confirma (seção 10.3).
 
 Alertas (medido neste lab: o de latência após ~4 min e o de lag logo em seguida — a espera é o
 `for:` + a janela de 2 min da regra):
@@ -831,7 +892,38 @@ def process_span(msg):
 > propagação no vídeo. (Links são úteis para *batches* — um poll com 500 mensagens — mas o
 > objetivo aqui é "siga *esta* mensagem".)
 
-### 10.3 Consultando no Grafana (Explore → Tempo)
+### 10.3 Latência e gargalos: do trace ao gráfico
+
+Um trace responde *"o que aconteceu com **esta** mensagem?"*. Para *"onde o sistema gasta tempo, em geral?"* o lab
+transforma os spans em **gráficos** no dashboard **Order pipeline - where is the time going?**
+(<http://localhost:3000/d/e2e-latency>):
+
+| Painel | Responde | De onde vem |
+|---|---|---|
+| **Onde um pedido gasta tempo** (empilhado) | qual **pedaço** da jornada cresceu: espera no tópico `orders`, trabalho do processor, espera em `orders.processed`, trabalho do sink | métricas do app: `demo_topic_wait_seconds` e `demo_stage_processing_seconds` |
+| **Slowest part right now (p95)** | a barra mais comprida é onde olhar primeiro | idem |
+| **Heatmap de latência fim a fim** | é *toda* mensagem ou só a cauda? | `demo_end_to_end_latency_seconds` |
+| **Service map** | quem fala com quem (producer → processor → sink), taxa e erros | Tempo *metrics generator* (`traces_service_graph_*`) |
+| **p95 por span** / **taxa de spans** | qual *passo* dentro de um serviço ficou lento | Tempo *metrics generator* (`traces_spanmetrics_*`) |
+| **TraceQL metrics** | o mesmo, calculado pelo Tempo, filtrando por **qualquer atributo** do span | `{ … } \| quantile_over_time(duration, .95)` |
+
+A peça-chave é a **espera no tópico**: o broker não emite spans, então no waterfall ela é só uma *lacuna* (seção 10.1).
+O consumer a mede e a exporta como métrica (`observe_topic_wait` em `lab/app/app.py`: `agora − timestamp do registro`),
+e assim a lacuna vira um número que dá para empilhar, alertar e comparar.
+
+Como os spans viram métricas (tudo em Git): o Tempo roda o *metrics generator*
+(`gitops/apps/15-tempo.yaml`) com os processadores `service-graphs`, `span-metrics` e `local-blocks`, e faz *remote-write* no
+Prometheus, que por isso liga `enableRemoteWriteReceiver` (`gitops/apps/10-kube-prometheus-stack.yaml`). O datasource do
+Tempo aponta o *service map* para o Prometheus (`serviceMap.datasourceUid`).
+
+> **Pegadinhas que o lab encontrou:** (1) sem `enableRemoteWriteReceiver` no Prometheus o *remote-write* do Tempo falha em
+> silêncio — as séries `traces_*` simplesmente não aparecem; (2) o `local_blocks` só guarda spans de *servidor/consumer* por
+> padrão: para o TraceQL metrics enxergar spans **internos** (como `validate and enrich order`) é preciso
+> `filter_server_spans: false`; (3) as séries `traces_*` só existem **depois** do primeiro tráfego e o mapa de serviços leva
+> alguns minutos para se desenhar; (4) ligar essas duas opções **reinicia o Prometheus e o Tempo** — no lab (sem disco) o
+> histórico é perdido.
+
+### 10.4 Consultando no Grafana (Explore → Tempo)
 
 ```text
 { resource.service.name = "order-producer" }                     # todos os pedidos
@@ -839,7 +931,7 @@ def process_span(msg):
 { resource.service.name = "order-sink" && duration > 2s }         # chegaram ao fim, mas devagar
 ```
 
-### 10.4 O que o broker **não** mostra no trace
+### 10.5 O que o broker **não** mostra no trace
 
 O Kafka em si **não emite spans**: no waterfall, o broker é a lacuna entre `send` e `process`. Isso
 é inerente ao Kafka, não ao lab. O Strimzi documenta tracing com OpenTelemetry para
@@ -855,7 +947,7 @@ aplicações **Java**, o *agent* do OpenTelemetry instrumenta o `kafka-clients` 
 | Métricas *por partição* do Kafka Exporter | cuidado com **cardinalidade**: tópicos × partições × grupos explode a série; use `topicRegex`/`groupRegex` para limitar |
 | Alertmanager único + webhook de lab | HA + receivers reais (Slack/PagerDuty); *secrets* em `Secret`, **inibições** e silenciamentos como código |
 | `for: 30s–1m` nos alertas (para o lab reagir rápido) | `for: 5m+` em tudo que se cura sozinho (rolling restart gera URP por ~1 min: normal); alerte em **sintoma** (lag, latência, erro), use causa (disco, ISR) como *warning* |
-| Tempo single-binary, sem persistência, 100% de amostragem | `tempo-distributed` ou Grafana Cloud, **object storage**, **OpenTelemetry Collector** no meio (amostragem *tail-based* para guardar 100% dos erros e uma fração do resto) |
+| Tempo single-binary, sem persistência, 100% de amostragem, *metrics generator* no próprio Tempo | `tempo-distributed` ou Grafana Cloud, **object storage**, **OpenTelemetry Collector** no meio (amostragem *tail-based* para guardar 100% dos erros e uma fração do resto) |
 | Grafana `admin/admin`, listeners do Kafka em texto plano | SSO, TLS/SCRAM (Day 4) — **e o scraping** precisa conhecer isso; `NetworkPolicy` para `/metrics` |
 | `kubelet_volume_stats` ausente (kind) | alerta de disco (`KafkaRunningOutOfDisk`) funciona em cluster real com CSI — **ative-o** |
 | AppProject permissivo (`*`) | restrinja `sourceRepos`, `destinations` e o que o projeto pode criar (comentado em `appproject.yaml`) |
@@ -905,7 +997,7 @@ kind delete cluster --name strimzi-day10
 pkill -f "port-forward svc/git-server" 2>/dev/null
 pkill -f "port-forward svc/argocd-server" 2>/dev/null
 rm -rf lab/work lab/app/__pycache__
-docker rmi kafka-e2e-demo:0.1.0 2>/dev/null
+docker rmi kafka-e2e-demo:0.2.0 2>/dev/null
 ```
 
 ## 14. Roteiro sugerido para o vídeo

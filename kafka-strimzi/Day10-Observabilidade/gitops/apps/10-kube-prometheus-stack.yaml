@@ -25,6 +25,7 @@ spec:
             serviceMonitorSelectorNilUsesHelmValues: false
             podMonitorSelectorNilUsesHelmValues: false
             ruleSelectorNilUsesHelmValues: false
+            enableRemoteWriteReceiver: true   # Tempo's metrics generator pushes span metrics / service graph here (/api/v1/write)
             retention: 6h                  # LAB. Production: size it (retention + remote_write / Thanos / Mimir).
             resources:
               requests: { cpu: 100m, memory: 512Mi }

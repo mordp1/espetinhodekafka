@@ -1,0 +1,68 @@
+# EXAMPLE for the Alertmanager Routing Tree Editor: https://prometheus.io/webtools/alerting/routing-tree-editor/
+# Paste this whole file into the editor, then type one of the label sets from README.md / test.sh and watch the path light up.
+# It is a PRODUCTION-SHAPED version of the lab's routing (the lab itself only has the webhook): same labels the lab's
+# PrometheusRules emit (alertname, severity, team, namespace), three receivers, one `continue`, one inhibition.
+# Placeholders (Slack URL, PagerDuty key) are fake: in a real cluster they come from a Secret, never from Git.
+global:
+  resolve_timeout: 5m
+
+route:                                       # <<< the ROOT: everything that matches nothing below ends here
+  receiver: platform-default
+  group_by: [alertname, namespace]           # one notification per alertname+namespace, not one per firing series
+  group_wait: 30s                            # wait to collect siblings before the FIRST notification
+  group_interval: 5m                         # time between notifications about NEW alerts of the same group
+  repeat_interval: 4h                        # re-notify an unchanged, still-firing group
+  routes:
+    # 1) the "pipeline is alive" alert must never page anyone
+    - receiver: "null"
+      matchers: [alertname = "Watchdog"]
+
+    # 2) business alerts go to the orders team FIRST... and `continue: true` lets the evaluation keep going,
+    #    so the platform team (route 3) is notified too. Without `continue`, the first match wins and stops.
+    - receiver: orders-team-slack
+      matchers: [alertname =~ "OrderPipeline.*|OrderProducerErrors"]
+      group_by: [alertname]
+      continue: true
+
+    # 3) everything labelled team=kafka-platform (the lab's rule: the label is the contract "who gets paged")
+    - receiver: kafka-platform-slack
+      matchers: [team = "kafka-platform"]
+      routes:
+        # 3a) critical: page the on-call, with a tighter timing, and `continue` so Slack also gets it (3b)
+        - receiver: kafka-platform-pagerduty
+          matchers: [severity = "critical"]
+          group_wait: 10s
+          repeat_interval: 15m
+          continue: true
+        # 3b) catch-all of the team (no matchers = matches everything): every severity lands on Slack.
+        #     GOTCHA: the parent's receiver is used only when NO child matches. Since 3a matches critical alerts, a
+        #     critical alert would reach ONLY PagerDuty if this child did not exist.
+        - receiver: kafka-platform-slack
+
+receivers:
+  - name: "null"                             # a receiver with no configs = drop
+  - name: platform-default
+    webhook_configs:
+      - url: http://alert-webhook.monitoring.svc:8080/     # the lab's receiver (prints the alert to the log)
+        send_resolved: true
+  - name: orders-team-slack
+    slack_configs:
+      - api_url: https://hooks.slack.com/services/T000/B000/XXXXXXXX
+        channel: "#orders-alerts"
+        send_resolved: true
+  - name: kafka-platform-slack
+    slack_configs:
+      - api_url: https://hooks.slack.com/services/T000/B000/XXXXXXXX
+        channel: "#kafka-platform"
+        send_resolved: true
+  - name: kafka-platform-pagerduty
+    pagerduty_configs:
+      - routing_key: 0123456789abcdef0123456789abcdef
+        send_resolved: true
+
+inhibit_rules:
+  # Not drawn by the Routing Tree Editor (it only shows routing), but it is part of the same file:
+  # if a partition is OFFLINE, the under-replicated alert for the same namespace is a symptom of it - mute the symptom.
+  - source_matchers: [alertname = "KafkaOfflinePartitions"]
+    target_matchers: [alertname = "KafkaUnderReplicatedPartitions"]
+    equal: [namespace]

@@ -17,5 +17,6 @@ data:
         url: http://tempo.monitoring.svc:3200
         jsonData:
           nodeGraph: { enabled: true }
+          serviceMap: { datasourceUid: prometheus }     # the service map is drawn from the traces_service_graph_* series in Prometheus
           tracesToMetrics:
             datasourceUid: prometheus
