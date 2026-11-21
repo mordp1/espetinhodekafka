@@ -1,0 +1,20 @@
+# DISTRIBUTING THE TRUST ANCHOR to the teams (trust-manager). The lab Root CA's PUBLIC certificate is copied, as a ConfigMap named
+# `kafka-lab-ca` (key ca.crt), into every namespace labelled kafka.lab/trust-ca=true - and kept in sync (rotate the CA once, every team
+# gets it). The private key never leaves the cert-manager namespace: the Bundle only reads the `tls.crt` key of the Secret.
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: kafka-lab-ca
+spec:
+  sources:
+    - secret: { name: lab-root-ca, key: tls.crt }
+  target:
+    configMap: { key: ca.crt }
+    namespaceSelector:
+      matchLabels: { kafka.lab/trust-ca: "true" }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-orders
+  labels: { kafka.lab/trust-ca: "true" }

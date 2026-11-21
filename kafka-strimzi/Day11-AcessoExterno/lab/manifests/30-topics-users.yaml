@@ -1,0 +1,33 @@
+# Two teams, each with its own topics and its own mTLS identity. This is what you hand to the teams (README, part 2, step 8).
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata: { name: orders.events, namespace: kafka, labels: { strimzi.io/cluster: my-cluster } }
+spec: { partitions: 3, replicas: 3, config: { retention.ms: 3600000 } }
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata: { name: payments.events, namespace: kafka, labels: { strimzi.io/cluster: my-cluster } }
+spec: { partitions: 3, replicas: 3, config: { retention.ms: 3600000 } }
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata: { name: team-orders, namespace: kafka, labels: { strimzi.io/cluster: my-cluster } }
+spec:
+  authentication: { type: tls }        # Strimzi issues a client certificate (CN=team-orders) signed by the Clients CA
+  authorization:
+    type: simple
+    acls:
+      - { resource: { type: topic, name: orders., patternType: prefix }, operations: [Describe, Read, Write] }
+      - { resource: { type: group, name: team-orders-, patternType: prefix }, operations: [Read] }
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata: { name: team-payments, namespace: kafka, labels: { strimzi.io/cluster: my-cluster } }
+spec:
+  authentication: { type: tls }
+  authorization:
+    type: simple
+    acls:
+      - { resource: { type: topic, name: payments., patternType: prefix }, operations: [Describe, Read, Write] }
+      - { resource: { type: group, name: team-payments-, patternType: prefix }, operations: [Read] }

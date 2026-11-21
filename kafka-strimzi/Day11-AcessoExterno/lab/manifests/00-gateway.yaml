@@ -1,0 +1,60 @@
+# The "front door" of the lab: a Gateway API Gateway implemented by Envoy Gateway, doing TLS PASSTHROUGH.
+# Envoy never decrypts anything: it reads the SNI (server name) of the TLS ClientHello and forwards the encrypted stream to the
+# Service whose TLSRoute matches that name. That is how ONE IP:443 reaches bootstrap, broker-0, broker-1 and broker-2.
+#
+# Strimzi manages the TLSRoutes (one per broker + one for bootstrap). It does NOT manage the Gateway: that is the platform team's.
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: kafka-proxy
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        # LAB: no cloud, so no LoadBalancer. A fixed NodePort + kind's extraPortMappings (30443 -> laptop :443) plays that role.
+        # In a cloud: remove this block and the Service becomes type LoadBalancer (that IP is what your DNS must point to).
+        type: NodePort
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              # Envoy Gateway defaults to `Local`: a node answers ONLY if an Envoy pod runs ON that node. kind maps laptop:443 to the
+              # control-plane node, where Envoy does not run, so the handshake hangs (it connects, then nothing). `Cluster` lets any node
+              # forward. In a cloud, `Local` is fine (the LB health check skips nodes without Envoy) and keeps the client's source IP.
+              externalTrafficPolicy: Cluster
+              ports:
+                - port: 443
+                  nodePort: 30443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: envoy
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: kafka-proxy
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: kafka-gateway
+  namespace: kafka
+spec:
+  gatewayClassName: envoy
+  listeners:
+    - name: kafka
+      protocol: TLS
+      port: 443
+      hostname: "*.kafka.lab.test"      # only names under this zone are accepted: bootstrap.kafka.lab.test, broker-N.kafka.lab.test
+      tls:
+        mode: Passthrough               # Kafka terminates TLS itself (so mTLS and your own certificate keep working)
+      allowedRoutes:
+        kinds: [{ group: gateway.networking.k8s.io, kind: TLSRoute }]
+        namespaces: { from: Same }      # Production: the Gateway lives in an infra namespace and uses `from: Selector` per team

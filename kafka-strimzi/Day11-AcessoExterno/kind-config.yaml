@@ -1,0 +1,17 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # The Gateway API data plane (Envoy) is a Service of type NodePort (lab/manifests/00-gateway.yaml pins it to 30443). kind forwards
+      # laptop :443 -> node :30443, so these 3 lines are "the cloud load balancer" of the lab:
+      #   laptop :443 -> Envoy (TLS passthrough, routing by SNI) -> the right Kafka broker.
+      - { containerPort: 30443, hostPort: 443, listenAddress: "127.0.0.1" }
+      # Fixed NodePorts of the `nodeport` listener used in scenario A: bootstrap + one per broker.
+      - { containerPort: 31090, hostPort: 31090, listenAddress: "127.0.0.1" }
+      - { containerPort: 31091, hostPort: 31091, listenAddress: "127.0.0.1" }
+      - { containerPort: 31092, hostPort: 31092, listenAddress: "127.0.0.1" }
+      - { containerPort: 31093, hostPort: 31093, listenAddress: "127.0.0.1" }
+  - role: worker
+  - role: worker
+  - role: worker      # 3 workers + required pod anti-affinity = one broker per node (same as Day 10)

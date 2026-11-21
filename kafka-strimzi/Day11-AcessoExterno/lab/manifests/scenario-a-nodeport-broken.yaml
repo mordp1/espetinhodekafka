@@ -1,0 +1,19 @@
+# Scenario A, step 1: the classic. A `nodeport` listener with NOTHING about hostnames. Applied as a JSON patch (a delta on the Kafka CR):
+#   kubectl -n kafka patch kafka my-cluster --type json --patch-file scenario-a-nodeport-broken.yaml
+# (LAB ONLY: plaintext + ANONYMOUS as super user, so the failure is about the NETWORK and not about TLS/ACLs.)
+- op: add
+  path: /spec/kafka/listeners/-
+  value:
+    name: nodeport
+    port: 9095
+    type: nodeport
+    tls: false
+    configuration:
+      bootstrap: { nodePort: 31090 }                 # fixed ports, so kind can map them to localhost (kind-config.yaml)
+      brokers:
+        - { broker: 0, nodePort: 31091 }
+        - { broker: 1, nodePort: 31092 }
+        - { broker: 2, nodePort: 31093 }
+- op: add
+  path: /spec/kafka/authorization/superUsers
+  value: ["ANONYMOUS"]

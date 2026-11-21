@@ -1,0 +1,10 @@
+# Scenario A, step 2: tell each broker the address CLIENTS must use (advertised.listeners). Index 2 = the `nodeport` listener.
+#   kubectl -n kafka patch kafka my-cluster --type json --patch-file scenario-a-nodeport-fixed.yaml
+# `host.docker.internal` is a name that resolves to the laptop BOTH from a container and from the laptop itself (Docker Desktop), and
+# kind publishes the NodePorts there. In real life: a DNS name that resolves to the nodes (or, better, a loadbalancer/tlsroute listener).
+- op: replace
+  path: /spec/kafka/listeners/2/configuration/brokers
+  value:
+    - { broker: 0, nodePort: 31091, advertisedHost: host.docker.internal, advertisedPort: 31091 }
+    - { broker: 1, nodePort: 31092, advertisedHost: host.docker.internal, advertisedPort: 31092 }
+    - { broker: 2, nodePort: 31093, advertisedHost: host.docker.internal, advertisedPort: 31093 }
