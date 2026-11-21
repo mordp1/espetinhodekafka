@@ -1,0 +1,3 @@
+# Team credentials produced by lab/scripts/client-bundle.sh (private keys!). Never commit.
+lab/bundle-*/
+*.pem

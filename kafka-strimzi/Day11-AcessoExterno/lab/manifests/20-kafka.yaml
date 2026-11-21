@@ -1,0 +1,78 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: dual-role
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  replicas: 3
+  roles: [controller, broker]
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 5Gi
+        deleteClaim: true              # LAB. Production: false.
+        kraftMetadata: shared
+  resources:
+    requests: { cpu: 250m, memory: 1Gi }
+    limits: { memory: 1280Mi }
+  jvmOptions:
+    "-Xms": 512m
+    "-Xmx": 512m
+  template:
+    pod:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels: { strimzi.io/pool-name: dual-role }
+              topologyKey: kubernetes.io/hostname
+---
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: my-cluster
+  namespace: kafka
+spec:
+  kafka:
+    version: 4.3.2
+    metadataVersion: 4.3-IV0
+    listeners:
+      # (1) INTERNAL: applications in the cluster. TLS + mTLS (Day 4). Clients use my-cluster-kafka-bootstrap.kafka.svc:9093.
+      - name: internal
+        port: 9093
+        type: internal
+        tls: true
+        authentication: { type: tls }
+      # (2) EXTERNAL: everything that is NOT in this cluster (other clusters, other networks, laptops, partners).
+      #     type: tlsroute = Strimzi creates one ClusterIP Service + one Gateway API TLSRoute per broker and one for bootstrap.
+      - name: external
+        port: 9094
+        type: tlsroute
+        tls: true                      # required: the Gateway does TLS PASSTHROUGH, the brokers terminate TLS
+        authentication: { type: tls }  # mTLS: the client proves WHO it is with a certificate signed by the Strimzi Clients CA
+        configuration:
+          parentRefs:                  # which Gateway the generated TLSRoutes attach to (the platform team owns it)
+            - { group: gateway.networking.k8s.io, kind: Gateway, name: kafka-gateway, namespace: kafka, sectionName: kafka }
+          bootstrap:
+            host: bootstrap.kafka.lab.test
+          hostTemplate: broker-{nodeId}.kafka.lab.test     # broker-0.kafka.lab.test, broker-1..., broker-2...
+          brokerCertChainAndKey:       # OUR certificate (lab PKI), instead of the one signed by the Strimzi Cluster CA
+            secretName: kafka-external-tls
+            certificate: tls.crt
+            key: tls.key
+    authorization:
+      type: simple                     # ACLs, Day 4
+    config:
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      default.replication.factor: 3
+      min.insync.replicas: 2
+      auto.create.topics.enable: false
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}

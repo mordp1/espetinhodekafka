@@ -1,0 +1,54 @@
+# The lab PKI, as code (cert-manager). Three levels, same shape as a corporate one, only self-signed at the top:
+#   selfsigned issuer -> lab-root-ca (ROOT CA, 10 years) -> lab-ca issuer -> kafka-external (the certificate the brokers serve)
+# Teams only ever need to TRUST lab-root-ca's public certificate. They never see the private keys.
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: lab-selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lab-root-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: Espetinho de Kafka Lab Root CA
+  secretName: lab-root-ca
+  duration: 87600h                      # 10 years: the root is the thing you DON'T want to rotate often
+  privateKey: { algorithm: ECDSA, size: 256 }
+  issuerRef: { name: lab-selfsigned, kind: ClusterIssuer }
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: lab-ca
+spec:
+  ca:
+    secretName: lab-root-ca             # read from the cert-manager namespace (ClusterIssuer's "cluster resource namespace")
+---
+# The listener certificate. Every name a client will use must be in dnsNames (SAN): the Java client checks the hostname against it.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: kafka-external
+  namespace: kafka
+spec:
+  secretName: kafka-external-tls        # Strimzi reads this Secret in the listener (brokerCertChainAndKey)
+  duration: 2160h                       # 90 days
+  renewBefore: 720h                     # cert-manager renews 30 days before expiry
+  privateKey:
+    algorithm: RSA
+    size: 2048
+    encoding: PKCS8                     # Strimzi requires a PKCS#8 key. cert-manager's default (PKCS1) is rejected: see scenario C.
+    rotationPolicy: Always              # a NEW key on every renewal (default is Never)
+  usages: [server auth, digital signature, key encipherment]
+  dnsNames:
+    - bootstrap.kafka.lab.test
+    - broker-0.kafka.lab.test
+    - broker-1.kafka.lab.test
+    - broker-2.kafka.lab.test
+  issuerRef: { name: lab-ca, kind: ClusterIssuer }

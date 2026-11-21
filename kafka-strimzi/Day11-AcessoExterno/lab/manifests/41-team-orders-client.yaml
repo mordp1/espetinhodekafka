@@ -1,0 +1,25 @@
+# What a TEAM runs in ITS OWN namespace: a client that reaches Kafka through the EXTERNAL listener (same names and certificate as a
+# laptop), trusting the CA that trust-manager delivered and presenting its own identity (the KafkaUser Secret copied into the namespace).
+apiVersion: v1
+kind: Pod
+metadata:
+  name: orders-app
+  namespace: team-orders
+spec:
+  containers:
+    - name: client
+      image: apache/kafka:4.3.0
+      command: ["sh", "-c"]
+      args:
+        - |
+          cat /creds/user.key /creds/user.crt > /tmp/keystore.pem
+          printf 'security.protocol=SSL\nssl.truststore.type=PEM\nssl.truststore.location=/ca/ca.crt\nssl.keystore.type=PEM\nssl.keystore.location=/tmp/keystore.pem\n' > /tmp/client.properties
+          sleep infinity
+      volumeMounts:
+        - { name: ca, mountPath: /ca, readOnly: true }
+        - { name: creds, mountPath: /creds, readOnly: true }
+  volumes:
+    - name: ca
+      configMap: { name: kafka-lab-ca }        # delivered by trust-manager (40-trust-bundle.yaml)
+    - name: creds
+      secret: { secretName: team-orders }      # the KafkaUser Secret, copied from the kafka namespace (Day 5's KafkaAccess automates this)

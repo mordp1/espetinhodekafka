@@ -1,0 +1,6 @@
+# Back to the baseline Kafka CR: drop the nodeport listener (index 2) and the lab-only ANONYMOUS super user.
+#   kubectl -n kafka patch kafka my-cluster --type json --patch-file scenario-a-cleanup.yaml
+- op: remove
+  path: /spec/kafka/listeners/2
+- op: remove
+  path: /spec/kafka/authorization/superUsers
